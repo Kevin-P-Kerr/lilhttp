@@ -7,8 +7,21 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+char ttyin(void) {
+	FILE *tty;
+	char nc;
+	if ((tty=fopen("/dev/tty", "r"))==NULL) {
+		fprintf(stderr, "ttyin error\n");
+		exit(EXIT_FAILURE);
+	} if ((nc=fgetc(tty))==EOF) { // nothing happened
+		return 'c';
+	} else {
+		return nc;
+	}
+};
+
 int main(int argc, char *argv[]) {
-	char *progname = argv[0];
+	char nc, *progname=argv[0];
 	int sockfd, newsockfd, portno, clilen, n;
 	char buffer[BUFSIZ];
 	struct sockaddr_in serv_addr, cli_addr;
@@ -40,5 +53,5 @@ int main(int argc, char *argv[]) {
 	if (n<0) {
 		fprintf(stderr, "%s, ERROR WRITING TO SOCKET", progname);
 		exit(EXIT_FAILURE);
-	} exit(EXIT_SUCCESS);
+	}exit(EXIT_SUCCESS);
 }; 
