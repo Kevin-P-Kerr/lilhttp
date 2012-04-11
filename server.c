@@ -50,7 +50,7 @@ int Write(int *fd, char *msg, int len) {
 
 int main(int argc, char *argv[]) {
 	char *progname=argv[0];
-	int sockfd, newsockfd, portno, clilen, n;
+	int sockfd, newsockfd, portno, clilen, n, pid;
 	char buffer[BUFSIZ];
 	struct sockaddr_in serv_addr, cli_addr;
 	if (argc < 2 ) {
@@ -65,9 +65,18 @@ int main(int argc, char *argv[]) {
 	Bind(&sockfd, &serv_addr);
 	listen(sockfd, 5);
 	clilen = sizeof(cli_addr);
-	Accept(&newsockfd, &sockfd, &cli_addr, &clilen);
-	bzero(buffer, BUFSIZ); // reset buffer
-	Read(&newsockfd, buffer, BUFSIZ);
-	Write(&newsockfd, "I got your message!", 18);
-	exit(EXIT_SUCCESS);
+	while (1) {
+			Accept(&newsockfd, &sockfd, &cli_addr, &clilen);
+			if ((pid=fork())<0) {
+				fprintf(stderr, "%s, Forking Error\n", progname);
+				exit(EXIT_FAILURE);
+			} if (pid==0) {
+				bzero(buffer, BUFSIZ); // reset buffer
+				Read(&newsockfd, buffer, BUFSIZ);
+				Write(&newsockfd, "I got your message!", 18);
+				exit(EXIT_SUCCESS);
+			} else {
+				close(newsockfd);
+		}
+	} exit(EXIT_SUCCESS);
 }; 
