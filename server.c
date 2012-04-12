@@ -6,10 +6,26 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#define ON 1
+#define OFF 0
+
+typedef struct token {
+	int type;
+	char *value;
+} Token;
+
+struct lexer {
+	char start;
+	char end;
+	int flag;
+};
 
 int CreateSocket(int *fd) {
-	*fd = socket(AF_INET, SOCK_STREAM, 0);
-	return 1;
+	if ((*fd = socket(AF_INET, SOCK_STREAM, 0))>=0)
+		return 1;
+	else {
+		exit(EXIT_FAILURE);
+	}
 };
 
 int Bind(int *fd, struct sockaddr_in *skaddr) {
@@ -48,6 +64,68 @@ int Write(int *fd, char *msg, int len) {
 	}
 };
 
+int GetDiff(stuct lexer *lex) {
+	if (*lex->end==EOF || *lex->end=='\0') {
+		fprintf(stderr, "LEX ERROR, LEXER.END IS ON EOF OR 0\n");
+		exit(EXIT_FAILURE);
+	} else {
+		for (*lex->end; *lex->end!=' ' && lex->end!=EOF && lex->end!='\0'; ++lex->end)
+			;
+	} return 1;
+};
+
+int //write the restart lexer stuff
+Token *GetToken(char *request, struct lexer *lex) {
+	int diff, n;
+	char *tmp;
+	Token *tok = malloc(sizeof(Token));
+	if (lex->flag==ON) { // get the lexer back on track
+		RestartLex(lex);
+	}
+	GetDiff(lex);
+	diff = lex->end - lex->start;
+	tmp = malloc(diff+1 * sizeof(char));
+	strncpy(tmp, lex->start, diff);
+	tmp[diff+1] = '\0';
+	if(!n=Checksym(&tmp)) {
+		fprintf(stderr, "Parse Error, Problem Parsing %s\n", tmp);
+		exit(EXIT_FAILURE);
+	} tok->type=n;
+	while (*lex->end==' ') { // skip whitespace
+		if (*lex->end ==EOF || *lex->end == '\0')
+			break;
+		++lex->end;
+	}lex->start = lex->end;
+	GetDiff(lex);
+	diff = lex->end - lex->start;
+	free(tmp);
+	tmp = malloc(diff+1 * sizeof(char));
+	strncpy(tmp, lex->start, diff);
+	tmp[diff+1] = '\0';
+	tok->value = malloc(diff+1 * sizeof(char));
+	strcpy(tok->value, tmp);
+	free(tmp);
+	return tok;
+}
+
+char *BuildResponse(char *request) {
+	struct lexer lex;
+	lex.start = response;
+	lex.end = resonse;
+	lex.flag = OFF;
+	char *response[BUFSIZ];
+	Token *tok;
+	tok = GetToken(request, &lex);
+	if
+
+int HandleResponse(int *fd, char *buf) {
+	char retbuf[BUFSIZ+1];
+	Read(fd, buf, BUFSIZ);
+	retbuf=BuildResponse(buf);
+	Write(fd, retbuf, BUFSIZ+1);
+	return 1;
+};
+
 int main(int argc, char *argv[]) {
 	char *progname=argv[0];
 	int sockfd, newsockfd, portno, clilen, n, pid;
@@ -71,9 +149,7 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "%s, Forking Error\n", progname);
 				exit(EXIT_FAILURE);
 			} if (pid==0) {
-				bzero(buffer, BUFSIZ); // reset buffer
-				Read(&newsockfd, buffer, BUFSIZ);
-				Write(&newsockfd, "I got your message!", 18);
+				HandleResponse(&newsockfd, buffer);
 				exit(EXIT_SUCCESS);
 			} else {
 				close(newsockfd);
