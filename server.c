@@ -121,22 +121,67 @@ Token *GetToken(char *request, struct lexer *lex) {
 	return tok;
 }
 
-char *BuildResponse(char *request) {
+int ParseHeaders(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
+	free(tok->value);
+	free(tok);
+	return 1;
+};
+
+int  ParseInitalLine(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
+	FILE *resource
+	char buf[BUFSIZ];
+
+	if (tok->type==GET) {
+		if ((resource=fopen(tok->value, "r"))==NULL) {
+			strcpy(response, "HTTP/1.0 404 Not Found");
+			*i = *i + strlen("HTTP/1.0 404 Not Found");
+			free(tok->value);
+			free(tok);
+			return 1;
+		} else {
+			strcpy(response, "HTTP/1.0 200 OK");
+			*i = *i + strlen("HTTP/1.0 200 0K");
+			free(tok->value);
+			free(tok);
+			tok=GetToken(request, lex);
+			if (tok->type==END) 
+				return 1; // end the parse process
+			ParseHeaders(tok, response, request, lex, i);
+			return 1;
+		}
+	}
+};	
+char *BuildResponse(char *request, int fd) {
 	struct lexer lex;
+	char response[BUFSIZ];
+	int i; //index for response buffer
+
 	lex.start = response;
 	lex.end = resonse;
 	lex.flag = OFF;
-	char *response[BUFSIZ];
 	Token *tok;
 	tok = GetToken(request, &lex);
-	if
+	ParseInitalLine(tok, response, request, *lex, &i);
+	return response;
+};
 
 int HandleResponse(int *fd, char *buf) {
 	char retbuf[BUFSIZ+1];
 	Read(fd, buf, BUFSIZ);
-	retbuf=BuildResponse(buf);
+	retbuf=BuildResponse(buf, fd);
 	Write(fd, retbuf, BUFSIZ+1);
 	return 1;
+};
+
+int Log(char *buf) {
+	int fd;
+	FILE *log;
+	if ((log=fopen("./log", "w"))==NULL) {
+		if ((fd=creat("./log", "w"))<0) {
+			fprintf(stderr, "ERROR CREATING LOG FILE\n");
+			exit(EXIT_FAILURE);
+		} log=fopen("./log", "w");
+	} fputs(buf, log);
 };
 
 int main(int argc, char *argv[]) {
@@ -162,6 +207,7 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "%s, Forking Error\n", progname);
 				exit(EXIT_FAILURE);
 			} if (pid==0) {
+				Log(buffer);
 				HandleResponse(&newsockfd, buffer);
 				exit(EXIT_SUCCESS);
 			} else {
