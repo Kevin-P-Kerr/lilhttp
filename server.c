@@ -89,18 +89,24 @@ Token *GetToken(char *request, struct lexer *lex) {
 	if (lex->flag==ON) { // get the lexer back on track
 		RestartLex(lex);
 	}
-	GetDiff(lex);
+	if (*lex->end==EOF || *lex->end=='\0') { //check if we're at end of input
+		tok->type=END;
+		tok->value = malloc(sizeof(char));
+		*tok->value = *lex->end;
+		return tok;
+	} GetDiff(lex);
 	diff = lex->end - lex->start;
 	tmp = malloc(diff+1 * sizeof(char));
 	strncpy(tmp, lex->start, diff);
 	tmp[diff+1] = '\0';
 	if(!n=Checksym(&tmp)) {
-		fprintf(stderr, "Parse Error, Problem Parsing %s\n", tmp);
-		exit(EXIT_FAILURE);
-	} tok->type=n;
+		tok->type = OTHER;
+		tok->value = malloc(diff+1 * sizeof(char));
+		strcpy(tok->value, tmp);
+		free(tmp);
+		return tok;
+	} tok->type=n; //otherwise, the type is defined in the symbol table
 	while (*lex->end==' ') { // skip whitespace
-		if (*lex->end ==EOF || *lex->end == '\0')
-			break;
 		++lex->end;
 	}lex->start = lex->end;
 	GetDiff(lex);
