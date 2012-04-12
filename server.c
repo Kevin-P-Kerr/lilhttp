@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #define ON 1
 #define OFF 0
+#define END 128
 
 typedef struct token {
 	int type;
@@ -74,7 +75,13 @@ int GetDiff(stuct lexer *lex) {
 	} return 1;
 };
 
-int //write the restart lexer stuff
+int RestartLex(Lexer *lex) {
+	while (*lex->end==' ' || *lex->end=='\n') {
+		++lex->end;
+	} if (*lex->end=='\0' || *lex->end==EOF) {
+	} return 1;
+};
+
 Token *GetToken(char *request, struct lexer *lex) {
 	int diff, n;
 	char *tmp;
