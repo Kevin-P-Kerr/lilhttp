@@ -9,6 +9,17 @@
 #define ON 1
 #define OFF 0
 #define END 128
+#define GET 129
+#define OTHER 130
+
+typedef struct pair {
+	char *key;
+	int value;
+} Pair;
+
+struct SymTable {
+	Pair table[25];
+};
 
 typedef struct token {
 	int type;
@@ -16,8 +27,8 @@ typedef struct token {
 } Token;
 
 struct lexer {
-	char start;
-	char end;
+	char *start;
+	char *end;
 	int flag;
 };
 
@@ -65,21 +76,34 @@ int Write(int *fd, char *msg, int len) {
 	}
 };
 
-int GetDiff(stuct lexer *lex) {
+int GetDiff(struct lexer *lex) {
 	if (*lex->end==EOF || *lex->end=='\0') {
 		fprintf(stderr, "LEX ERROR, LEXER.END IS ON EOF OR 0\n");
 		exit(EXIT_FAILURE);
 	} else {
-		for (*lex->end; *lex->end!=' ' && lex->end!=EOF && lex->end!='\0'; ++lex->end)
+		for (*lex->end; *lex->end!=' ' && *lex->end!=EOF && *lex->end!='\0'; ++lex->end)
 			;
 	} return 1;
 };
 
-int RestartLex(Lexer *lex) {
+int RestartLex(struct lexer *lex) {
 	while (*lex->end==' ' || *lex->end=='\n') {
 		++lex->end;
 	} if (*lex->end=='\0' || *lex->end==EOF) {
 	} return 1;
+};
+
+int Checksym(char *string) { // returns a symbol value if string is in table
+	struct SymTable table;
+	int i=0, tablelen=25;
+	table.table[0].key = malloc(4 * sizeof(char));
+	strcpy(table.table[0].key, "GET");
+	table.table[0].value = GET;
+	while((strcmp(table.table[i].key, string)!=0) && i<=tablelen) {
+		++i;
+	} if (i>tablelen) { // unable to find symbol
+		return -1;
+	} return table.table[i].value; // else return token type
 };
 
 Token *GetToken(char *request, struct lexer *lex) {
@@ -99,7 +123,7 @@ Token *GetToken(char *request, struct lexer *lex) {
 	tmp = malloc(diff+1 * sizeof(char));
 	strncpy(tmp, lex->start, diff);
 	tmp[diff+1] = '\0';
-	if(!n=Checksym(&tmp)) {
+	if((n=Checksym(tmp))<0) {
 		tok->type = OTHER;
 		tok->value = malloc(diff+1 * sizeof(char));
 		strcpy(tok->value, tmp);
@@ -119,7 +143,7 @@ Token *GetToken(char *request, struct lexer *lex) {
 	strcpy(tok->value, tmp);
 	free(tmp);
 	return tok;
-}
+};
 
 int ParseHeaders(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
 	free(tok->value);
@@ -128,17 +152,17 @@ int ParseHeaders(Token *tok, char *response, char *request, struct lexer *lex, i
 };
 
 int  ParseInitalLine(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
-	FILE *resource
+	FILE *resource;
 	char buf[BUFSIZ];
 
 	if (tok->type==GET) {
-		if ((resource=fopen(tok->value, "r"))==NULL) {
+//		if ((resource=fopen(tok->value, "r"))==NULL) {
 			strcpy(response, "HTTP/1.0 404 Not Found");
 			*i = *i + strlen("HTTP/1.0 404 Not Found");
 			free(tok->value);
 			free(tok);
-			return 1;
-		} else {
+			return 1; } };
+/*		} else {
 			strcpy(response, "HTTP/1.0 200 OK");
 			*i = *i + strlen("HTTP/1.0 200 0K");
 			free(tok->value);
@@ -150,26 +174,29 @@ int  ParseInitalLine(Token *tok, char *response, char *request, struct lexer *le
 			return 1;
 		}
 	}
-};	
-char *BuildResponse(char *request, int fd) {
-	struct lexer lex;
-	char response[BUFSIZ];
-	int i; //index for response buffer
+}; */
 
-	lex.start = response;
-	lex.end = resonse;
+int BuildResponse(char *request, char *response, int *fd, int *i) {
+	struct lexer lex;
+	lex.start = request;
+	lex.end = request;
 	lex.flag = OFF;
 	Token *tok;
 	tok = GetToken(request, &lex);
-	ParseInitalLine(tok, response, request, *lex, &i);
-	return response;
+	fprintf(stderr, "%s\n", tok->value);
+	fprintf(stderr, "%d\n", tok->type);
+	ParseInitalLine(tok, response, request, &lex, i);
+	return 1;
 };
 
 int HandleResponse(int *fd, char *buf) {
 	char retbuf[BUFSIZ+1];
+	int i=0; // index into retbuf
 	Read(fd, buf, BUFSIZ);
-	retbuf=BuildResponse(buf, fd);
-	Write(fd, retbuf, BUFSIZ+1);
+	fprintf(stderr, buf);
+	BuildResponse(buf, retbuf, fd, &i);
+	fprintf(stderr, retbuf);
+	Write(fd, retbuf, i);
 	return 1;
 };
 
@@ -207,7 +234,6 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "%s, Forking Error\n", progname);
 				exit(EXIT_FAILURE);
 			} if (pid==0) {
-				Log(buffer);
 				HandleResponse(&newsockfd, buffer);
 				exit(EXIT_SUCCESS);
 			} else {
