@@ -1,4 +1,4 @@
-# LIL'HTTP: A Little HTTP Library #
+# LIL'HTTP: A Little HTTP Server #
 
 ### To Do ###
 
