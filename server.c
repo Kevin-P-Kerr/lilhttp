@@ -6,12 +6,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <time.h>
 #define ON 1
 #define OFF 0
 #define END 128
 #define GET 129
 #define OTHER 130
-
 typedef struct pair {
 	char *key;
 	int value;
@@ -145,36 +145,45 @@ Token *GetToken(char *request, struct lexer *lex) {
 	return tok;
 };
 
-int ParseHeaders(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
-	free(tok->value);
-	free(tok);
+int ParseHeaders(Token *tok, char *response, char *request, struct lexer *lex, int *i) { // not parsing headers for right now
+	fprintf(stderr, "We Are Parsing The Headers\n");
+	struct tm tm;
+	char *time = asctime(&tm);
+	strcpy(&response[*i], "Server: KevServer/0.1\n\n");
+	*i = *i + strlen("Server: KevServer/0.1\n\n");
 	return 1;
 };
 
 int  ParseInitalLine(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
 	FILE *resource;
-	char buf[BUFSIZ];
-
+	char buf[BUFSIZ], *path;
 	if (tok->type==GET) {
-//		if ((resource=fopen(tok->value, "r"))==NULL) {
-			strcpy(response, "HTTP/1.0 404 Not Found");
+		path = malloc(strlen(tok->value)+1 * sizeof(char));
+		path[0] = '.';
+		strcpy(&path[1], tok->value);		
+		if ((resource=fopen(path, "r"))==NULL) {
+			fprintf(stderr, "We Could Not Open The File\nThe Path Was\n%s\n", path);
+			strcpy(response, "HTTP/1.0 404 Not Found\n\n404:Could Not Find File");
 			*i = *i + strlen("HTTP/1.0 404 Not Found");
 			free(tok->value);
 			free(tok);
-			return 1; } };
-/*		} else {
-			strcpy(response, "HTTP/1.0 200 OK");
-			*i = *i + strlen("HTTP/1.0 200 0K");
+			return 1; 
+		} else {
+			strcpy(response, "HTTP/1.0 200 OK\n");
+			*i = *i + strlen("HTTP/1.0 200 0K\n");
+			fprintf(stderr, "We Could Open The File\nThe Path Was\n%s\n", path);
 			free(tok->value);
 			free(tok);
-			tok=GetToken(request, lex);
-			if (tok->type==END) 
-				return 1; // end the parse process
+	//		tok=GetToken(request, lex);
+	//		if (tok->type==END)
+	//			return 1; // end the parse process
 			ParseHeaders(tok, response, request, lex, i);
+			for (i; fgets(&response[*i], 20, resource)!=NULL; *i += 20);
+				;
 			return 1;
 		}
 	}
-}; */
+};
 
 int BuildResponse(char *request, char *response, int *fd, int *i) {
 	struct lexer lex;
@@ -193,9 +202,9 @@ int HandleResponse(int *fd, char *buf) {
 	char retbuf[BUFSIZ+1];
 	int i=0; // index into retbuf
 	Read(fd, buf, BUFSIZ);
-	fprintf(stderr, buf);
+	fprintf(stderr,"We are in HANDLERESPONSE\nTHE REUQEST IS\n%s\n", buf);
 	BuildResponse(buf, retbuf, fd, &i);
-	fprintf(stderr, retbuf);
+	fprintf(stderr, "We are in HANDLERESPONSE\nTHE REPSONSE IS\n%s\n", retbuf);
 	Write(fd, retbuf, i);
 	return 1;
 };
