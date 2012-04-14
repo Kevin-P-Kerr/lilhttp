@@ -146,12 +146,21 @@ Token *GetToken(char *request, struct lexer *lex) {
 };
 
 int ParseHeaders(Token *tok, char *response, char *request, struct lexer *lex, int *i) { // not parsing headers for right now
+	int n; // length for strncpy
 	fprintf(stderr, "We Are Parsing The Headers\n");
-	struct tm tm;
-	char *time = asctime(&tm);
-	strcpy(&response[*i], "Server: KevServer/0.1\n\n");
-	*i = *i + strlen("Server: KevServer/0.1\n\n");
+	strncpy(&response[*i], "Server: KevServer/0.1\n", strlen("Server: KevServer/0.1\n"));
+	*i = CountChar(response);
+	strncpy(&response[*i], "Content-Type: text/html; charset=utf-8\n\n", strlen("Content-Type: text/html; charset=utf-8\n\n"));
+	*i = CountChar(response);
 	return 1;
+};
+
+int CountChar(char *buf){
+	int nc=0;
+	while(buf[nc]!='\0') {
+		nc++;
+	}
+	return nc;
 };
 
 int  ParseInitalLine(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
@@ -163,14 +172,14 @@ int  ParseInitalLine(Token *tok, char *response, char *request, struct lexer *le
 		strcpy(&path[1], tok->value);		
 		if ((resource=fopen(path, "r"))==NULL) {
 			fprintf(stderr, "We Could Not Open The File\nThe Path Was\n%s\n", path);
-			strcpy(response, "HTTP/1.0 404 Not Found\n\n404:Could Not Find File");
+			strcpy(response, "HTTP/1.0 404 Not Found\n\n<!DOCTYPE HTML> <html> <head> <title>404:Could Not Find File</title> </head> <h1> 404: Could Not Find File </h1> </body> </html>");
 			*i = *i + strlen("HTTP/1.0 404 Not Found");
 			free(tok->value);
 			free(tok);
 			return 1; 
 		} else {
-			strcpy(response, "HTTP/1.0 200 OK\n");
-			*i = *i + strlen("HTTP/1.0 200 0K\n");
+			strncpy(response, "HTTP/1.0 200 OK\n", strlen("HTTP/1.0 200 OK\n"));
+			*i = CountChar(response);
 			fprintf(stderr, "We Could Open The File\nThe Path Was\n%s\n", path);
 			free(tok->value);
 			free(tok);
@@ -178,8 +187,11 @@ int  ParseInitalLine(Token *tok, char *response, char *request, struct lexer *le
 	//		if (tok->type==END)
 	//			return 1; // end the parse process
 			ParseHeaders(tok, response, request, lex, i);
-			for (i; fgets(&response[*i], 20, resource)!=NULL; *i += 20);
-				;
+			fprintf(stderr, "%d\n", *i);
+			while(fgets(&response[*i], 124, resource)!=NULL) {
+				*i = CountChar(response);
+				fprintf(stderr, "%d\n%s\n", *i, response);
+			}
 			return 1;
 		}
 	}
@@ -203,6 +215,7 @@ int HandleResponse(int *fd, char *buf) {
 	int i=0; // index into retbuf
 	Read(fd, buf, BUFSIZ);
 	fprintf(stderr,"We are in HANDLERESPONSE\nTHE REUQEST IS\n%s\n", buf);
+	memset(retbuf, '\0', BUFSIZ+1);
 	BuildResponse(buf, retbuf, fd, &i);
 	fprintf(stderr, "We are in HANDLERESPONSE\nTHE REPSONSE IS\n%s\n", retbuf);
 	Write(fd, retbuf, i);
