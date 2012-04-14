@@ -12,6 +12,9 @@
 #define END 128
 #define GET 129
 #define OTHER 130
+#define HTML 131
+#define JS 132
+
 typedef struct pair {
 	char *key;
 	int value;
@@ -99,6 +102,12 @@ int Checksym(char *string) { // returns a symbol value if string is in table
 	table.table[0].key = malloc(4 * sizeof(char));
 	strcpy(table.table[0].key, "GET");
 	table.table[0].value = GET;
+	table.table[1].key = malloc(6 * sizeof(char));
+	strcpy(table.table[1].key, ".html");
+	table.table[1].value = HTML;
+	table.table[2].key = malloc(4 * sizeof(char));
+	strcpy(table.table[2].key, ".js");
+	table.table[2].value = JS;
 	while((strcmp(table.table[i].key, string)!=0) && i<=tablelen) {
 		++i;
 	} if (i>tablelen) { // unable to find symbol
