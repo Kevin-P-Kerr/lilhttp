@@ -159,9 +159,27 @@ int ParseHeaders(Token *tok, char *response, char *request, struct lexer *lex, i
 	fprintf(stderr, "We Are Parsing The Headers\n");
 	strncpy(&response[*i], "Server: KevServer/0.1\n", strlen("Server: KevServer/0.1\n"));
 	*i = CountChar(response);
-	strncpy(&response[*i], "Content-Type: text/html; charset=utf-8\n\n", strlen("Content-Type: text/html; charset=utf-8\n\n"));
-	*i = CountChar(response);
 	return 1;
+};
+
+int DetermineDocType(char *path, char *response, int *i) {
+	int n=1;
+	char *tmp;
+	while (path[n]!='.') {
+		n++;
+	}
+	tmp = malloc((strlen(path)-n) * sizeof(char));
+	strcpy(tmp, &path[n]);
+	if((n=Checksym(tmp))<0) {
+		fprintf(stderr, "FILE TYPE NOT SUPPORTED\n");
+		exit(EXIT_FAILURE);
+	}if (n==HTML) {
+		strcpy(&response[*i], "Content-Type: text/html; charset=utf-8\n\n");
+		*i = CountChar(response);
+	}else if (n==JS) {
+		strcpy(&response[*i], "Content-Type: text/javascript; charset=utf-8\n\n");
+		*i = CountChar(response);
+	} return 1;
 };
 
 int CountChar(char *buf){
@@ -187,7 +205,7 @@ int  ParseInitalLine(Token *tok, char *response, char *request, struct lexer *le
 			free(tok);
 			return 1; 
 		} else {
-			strncpy(response, "HTTP/1.0 200 OK\n", strlen("HTTP/1.0 200 OK\n"));
+			strcpy(response, "HTTP/1.0 200 OK\n");
 			*i = CountChar(response);
 			fprintf(stderr, "We Could Open The File\nThe Path Was\n%s\n", path);
 			free(tok->value);
@@ -196,10 +214,10 @@ int  ParseInitalLine(Token *tok, char *response, char *request, struct lexer *le
 	//		if (tok->type==END)
 	//			return 1; // end the parse process
 			ParseHeaders(tok, response, request, lex, i);
+			DetermineDocType(path, response, i);
 			fprintf(stderr, "%d\n", *i);
 			while(fgets(&response[*i], 124, resource)!=NULL) {
 				*i = CountChar(response);
-				fprintf(stderr, "%d\n%s\n", *i, response);
 			}
 			return 1;
 		}
@@ -220,11 +238,11 @@ int BuildResponse(char *request, char *response, int *fd, int *i) {
 };
 
 int HandleResponse(int *fd, char *buf) {
-	char retbuf[BUFSIZ+1];
+	char retbuf[(4 * BUFSIZ)+1];
 	int i=0; // index into retbuf
 	Read(fd, buf, BUFSIZ);
 	fprintf(stderr,"We are in HANDLERESPONSE\nTHE REUQEST IS\n%s\n", buf);
-	memset(retbuf, '\0', BUFSIZ+1);
+	memset(retbuf, '\0', (4*BUFSIZ)+1);
 	BuildResponse(buf, retbuf, fd, &i);
 	fprintf(stderr, "We are in HANDLERESPONSE\nTHE REPSONSE IS\n%s\n", retbuf);
 	Write(fd, retbuf, i);
