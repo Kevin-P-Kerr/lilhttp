@@ -173,7 +173,7 @@ int  ParseInitalLine(Token *tok, char *response, char *request, struct lexer *le
 		if ((resource=fopen(path, "r"))==NULL) {
 			fprintf(stderr, "We Could Not Open The File\nThe Path Was\n%s\n", path);
 			strcpy(response, "HTTP/1.0 404 Not Found\n\n<!DOCTYPE HTML> <html> <head> <title>404:Could Not Find File</title> </head> <h1> 404: Could Not Find File </h1> </body> </html>");
-			*i = *i + strlen("HTTP/1.0 404 Not Found");
+			*i = CountChar(response);
 			free(tok->value);
 			free(tok);
 			return 1; 
