@@ -80,25 +80,30 @@ int Write(int *fd, char *msg, int len) {
 };
 
 int GetDiff(struct lexer *lex) {
+	lex->start = lex->end;
+	int i=0;
 	if (*lex->end==EOF || *lex->end=='\0') {
 		fprintf(stderr, "LEX ERROR, LEXER.END IS ON EOF OR 0\n");
 		exit(EXIT_FAILURE);
 	} else {
-		for (*lex->end; *lex->end!=' ' && *lex->end!=EOF && *lex->end!='\0'; ++lex->end)
-			;
+		for (*lex->end; *lex->end!=' ' && *lex->end!='\n' && *lex->end!=EOF && *lex->end!='\0'; ++lex->end) {
+			fprintf(stderr, "%d\n", i);
+			i++;
+	}
 	} return 1;
 };
 
 int RestartLex(struct lexer *lex) {
 	while (*lex->end==' ' || *lex->end=='\n') {
 		++lex->end;
-	} if (*lex->end=='\0' || *lex->end==EOF) {
-	} return 1;
+		if (*lex->end=='\0' || *lex->end==EOF) {
+			} return 1;
+	}return 1;
 };
 
 int Checksym(char *string) { // returns a symbol value if string is in table
 	struct SymTable table;
-	int i=0, tablelen=25;
+	int i=0, tablelen=2;
 	table.table[0].key = malloc(4 * sizeof(char));
 	strcpy(table.table[0].key, "GET");
 	table.table[0].value = GET;
