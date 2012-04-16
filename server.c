@@ -115,9 +115,12 @@ int Checksym(char *string) { // returns a symbol value if string is in table
 	table.table[2].value = JS;
 	while((strcmp(table.table[i].key, string)!=0) && i<=tablelen) {
 		++i;
+		fprintf(stderr, "Checksym i is %d\n", i);
 	} if (i>tablelen) { // unable to find symbol
+		fprintf(stderr, "this is where we ought to be\n");
 		return -1;
-	} return table.table[i].value; // else return token type
+	} 	fprintf(stderr, "we should not be here if %i\n");
+		return table.table[i].value; // else return token type
 };
 
 Token *GetToken(char *request, struct lexer *lex) {
@@ -127,6 +130,7 @@ Token *GetToken(char *request, struct lexer *lex) {
 	if (lex->flag==ON) { // get the lexer back on track
 		RestartLex(lex);
 	}
+	lex->flag = ON;
 	if (*lex->end==EOF || *lex->end=='\0') { //check if we're at end of input
 		tok->type=END;
 		tok->value = malloc(sizeof(char));
@@ -138,15 +142,14 @@ Token *GetToken(char *request, struct lexer *lex) {
 	strncpy(tmp, lex->start, diff);
 	tmp[diff+1] = '\0';
 	if((n=Checksym(tmp))<0) {
+		fprintf(stderr, "Did we get here?\n");
 		tok->type = OTHER;
 		tok->value = malloc(diff+1 * sizeof(char));
 		strcpy(tok->value, tmp);
 		free(tmp);
 		return tok;
 	} tok->type=n; //otherwise, the type is defined in the symbol table
-	while (*lex->end==' ') { // skip whitespace
-		++lex->end;
-	}lex->start = lex->end;
+	RestartLex(lex);
 	GetDiff(lex);
 	diff = lex->end - lex->start;
 	free(tmp);
@@ -215,9 +218,9 @@ int  ParseInitalLine(Token *tok, char *response, char *request, struct lexer *le
 			fprintf(stderr, "We Could Open The File\nThe Path Was\n%s\n", path);
 			free(tok->value);
 			free(tok);
-	//		tok=GetToken(request, lex);
-	//		if (tok->type==END)
-	//			return 1; // end the parse process
+			tok=GetToken(request, lex);
+			if (tok->type==END)
+				return 1; // end the parse process
 			ParseHeaders(tok, response, request, lex, i);
 			DetermineDocType(path, response, i);
 			fprintf(stderr, "%d\n", *i);
