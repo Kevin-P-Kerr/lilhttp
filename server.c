@@ -14,6 +14,8 @@
 #define OTHER 130
 #define HTML 131
 #define JS 132
+#define INDEX "/index.html"
+#define ROOT "/"
 
 typedef struct token {
 	int type;
@@ -24,6 +26,15 @@ struct lexer {
 	char *start;
 	char *end;
 	int flag;
+};
+
+FILE *efopen(char *path) {
+	FILE *fd;
+	
+	if ((fd=fopen(path, "r"))==NULL){
+		fprintf(stderr, "ERROR COULD NOT OPEN %s\n", path);
+		exit(EXIT_FAILURE);
+	} return fd;
 };
 
 int CreateSocket(int *fd) {
@@ -191,38 +202,86 @@ int CountChar(char *buf){
 	return nc;
 };
 
-int  ParseInitalLine(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
+int LoadFile(FILE *resource, char *response, int *i) {
+		while(fgets(&response[*i], 124, resource)!=NULL) {
+			*i = CountChar(response);
+		}
+		return 1;
+};
+
+int  ParseGet(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
 	FILE *resource;
 	char buf[BUFSIZ], *path;
-	if (tok->type==GET) {
-		path = malloc(strlen(tok->value)+1 * sizeof(char));
-		path[0] = '.';
-		strcpy(&path[1], tok->value);		
-		if ((resource=fopen(path, "r"))==NULL) {
-			fprintf(stderr, "We Could Not Open The File\nThe Path Was\n%s\n", path);
-			strcpy(response, "HTTP/1.0 404 Not Found\n\n<!DOCTYPE HTML> <html> <head> <title>404:Could Not Find File</title> </head> <h1> 404: Could Not Find File </h1> </body> </html>");
+
+	if (CheckRedirect(tok, response, i)) {
+		Redirect(tok, response, request, lex, i);
+		return 1;
+	}path = malloc(strlen(tok->value)+1 * sizeof(char));
+	path[0] = '.';
+	strcpy(&path[1], tok->value);
+	if ((resource=fopen(path, "r"))==NULL) {
+		fprintf(stderr, "We Could Not Open The File\nThe Path Was\n%s\n", path);
+		strcpy(response, "HTTP/1.0 404 Not Found\n\n<!DOCTYPE HTML> <html> <head> <title>404:Could Not Find File</title> </head> <h1> 404: Could Not Find File </h1> </body> </html>");
+		*i = CountChar(response);
+		free(tok->value);
+		free(tok);
+		return 1; 
+	} else {
+		strcpy(response, "HTTP/1.0 200 OK\n");
+		*i = CountChar(response);
+		fprintf(stderr, "We Could Open The File\nThe Path Was\n%s\n", path);
+		free(tok->value);
+		free(tok);
+		tok=GetToken(request, lex);
+		if (tok->type==END)
+			return 1; // end the parse process
+		ParseHeaders(tok, response, request, lex, i);
+		DetermineDocType(path, response, i);
+		LoadFile(resource, response, i);
+
+		while(fgets(&response[*i], 124, resource)!=NULL) {
 			*i = CountChar(response);
-			free(tok->value);
-			free(tok);
-			return 1; 
-		} else {
-			strcpy(response, "HTTP/1.0 200 OK\n");
-			*i = CountChar(response);
-			fprintf(stderr, "We Could Open The File\nThe Path Was\n%s\n", path);
-			free(tok->value);
-			free(tok);
-			tok=GetToken(request, lex);
-			if (tok->type==END)
-			    return 1; // end the parse process
-			ParseHeaders(tok, response, request, lex, i);
-			DetermineDocType(path, response, i);
-			while(fgets(&response[*i], 124, resource)!=NULL) {
-				*i = CountChar(response);
-			}
-			return 1;
 		}
+		return 1;
 	}
 };
+
+int CheckRedirect(Token *tok, char *response, int *i) {
+	static struct pair {
+		char *key;
+		char *value;
+	} table[] = {
+		ROOT, INDEX
+	};
+	
+	int n=0;
+	int tablen = 0;
+
+	while (n<=tablen) {
+		if (strcmp(tok->value, table[n].key)==0) {
+			free(tok->value);
+			tok->value = malloc(sizeof(char) * (strlen(table[n].value)+1));
+			strcpy(tok->value, table[n].value);
+			return 1;
+		} ++n;
+	}return 0;
+};
+
+int Redirect(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
+	FILE *resource;
+	char *path;
+
+	path = malloc(sizeof(char) * strlen(tok->value)+1);
+	path[0] = '.';
+	strcpy(&path[1], tok->value);
+
+	strcpy(&response[*i], "HTTP/1.0 301 Moved Permamently\n");
+	*i = CountChar(response);
+	strcpy(&response[*i], tok->value);
+	*i = CountChar(response);
+	return 1;
+};	
+		
 
 int BuildResponse(char *request, char *response, int *fd, int *i) {
 	struct lexer lex;
@@ -231,9 +290,10 @@ int BuildResponse(char *request, char *response, int *fd, int *i) {
 	lex.flag = OFF;
 	Token *tok;
 	tok = GetToken(request, &lex);
-	fprintf(stderr, "%s\n", tok->value);
+	if (tok->type == GET) { // begin dispatching on token type
+		ParseGet(tok, response, request, &lex, i);
+	} fprintf(stderr, "%s\n", tok->value);
 	fprintf(stderr, "%d\n", tok->type);
-	ParseInitalLine(tok, response, request, &lex, i);
 	return 1;
 };
 
