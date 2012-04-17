@@ -274,11 +274,14 @@ int Redirect(Token *tok, char *response, char *request, struct lexer *lex, int *
 	path = malloc(sizeof(char) * strlen(tok->value)+1);
 	path[0] = '.';
 	strcpy(&path[1], tok->value);
-
+	resource = efopen(path);
 	strcpy(&response[*i], "HTTP/1.0 301 Moved Permamently\n");
 	*i = CountChar(response);
 	strcpy(&response[*i], tok->value);
 	*i = CountChar(response);
+	strcpy(&response[*i], "\n\n");
+	*i = CountChar(response);
+	LoadFile(resource, response, i);
 	return 1;
 };	
 		
