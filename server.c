@@ -115,11 +115,16 @@ int Checksym(char *string) { // returns a symbol value if string is in table
 	table.table[2].value = JS;
 
 	int i=0, tablelen=2;
-	while((strcmp(table.table[i].key, string)!=0) && i<=tablelen) {
+	while(i<=tablelen) {
+		if (strcmp(table.table[i].key, string)!=0)
+			return table.table[i].value;
 		++i;
 	} if (i>tablelen) { // unable to find symbol
 		return -1;
-		return table.table[i].value; // else return token type
+	} else {
+		fprintf(stderr, "ERROR IN CHECKSYM\n");
+		exit(EXIT_FAILURE);
+	}
 };
 
 Token *GetToken(char *request, struct lexer *lex) {
