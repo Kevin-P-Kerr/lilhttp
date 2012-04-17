@@ -117,11 +117,8 @@ int Checksym(char *string) { // returns a symbol value if string is in table
 	int i=0, tablelen=2;
 	while((strcmp(table.table[i].key, string)!=0) && i<=tablelen) {
 		++i;
-		fprintf(stderr, "Checksym i is %d\n", i);
 	} if (i>tablelen) { // unable to find symbol
-		fprintf(stderr, "this is where we ought to be\n");
 		return -1;
-	} 	fprintf(stderr, "we should not be here if %i\n");
 		return table.table[i].value; // else return token type
 };
 
@@ -144,7 +141,6 @@ Token *GetToken(char *request, struct lexer *lex) {
 	strncpy(tmp, lex->start, diff);
 	tmp[diff+1] = '\0';
 	if((n=Checksym(tmp))<0) {
-		fprintf(stderr, "Did we get here?\n");
 		tok->type = OTHER;
 		tok->value = malloc(diff+1 * sizeof(char));
 		strcpy(tok->value, tmp);
@@ -225,7 +221,6 @@ int  ParseInitalLine(Token *tok, char *response, char *request, struct lexer *le
 				return 1; // end the parse process
 			ParseHeaders(tok, response, request, lex, i);
 			DetermineDocType(path, response, i);
-			fprintf(stderr, "%d\n", *i);
 			while(fgets(&response[*i], 124, resource)!=NULL) {
 				*i = CountChar(response);
 			}
