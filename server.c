@@ -125,7 +125,7 @@ int Checksym(char *string) { // returns a symbol value if string is in table
 
 	int i=0, tablelen=2;
 	while(i<=tablelen) {
-		if (strcmp(table.table[i].key, string)!=0)
+		if (strcmp(table.table[i].key, string)==0)
         {
             int temp = table.table[i].value;
             freeTable(&table, tablelen);
