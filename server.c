@@ -15,15 +15,6 @@
 #define HTML 131
 #define JS 132
 
-typedef struct pair {
-	char *key;
-	int value;
-} Pair;
-
-struct SymTable {
-	Pair table[25];
-};
-
 typedef struct token {
 	int type;
 	char *value;
@@ -101,43 +92,27 @@ int RestartLex(struct lexer *lex) {
 	}return 1;
 };
 
-void freeTable(struct SymTable *table, int tablelen)
-{
-    int i;
-    for (i=0; i<=tablelen; i++) {
-        free(table->table[i].key);
-    }
-}
-
-
 int Checksym(char *string) { // returns a symbol value if string is in table
-	struct SymTable table;
-
-	table.table[0].key = malloc(4 * sizeof(char));
-	strcpy(table.table[0].key, "GET");
-	table.table[0].value = GET;
-	table.table[1].key = malloc(6 * sizeof(char));
-	strcpy(table.table[1].key, ".html");
-	table.table[1].value = HTML;
-	table.table[2].key = malloc(4 * sizeof(char));
-	strcpy(table.table[2].key, ".js");
-	table.table[2].value = JS;
+	static struct pair {
+		char *key;
+		int value;
+	} table[] = {
+		"GET", GET,
+		".html", HTML,
+		".js", JS
+	};
 
 	int i=0, tablelen=2;
 	while(i<=tablelen) {
-		if (strcmp(table.table[i].key, string)==0)
+		if (strcmp(table[i].key, string)==0)
         {
-            int temp = table.table[i].value;
-            freeTable(&table, tablelen);
-			return temp;
+            return table[i].value;
         }
 		++i;
 	} if (i>tablelen) { // unable to find symbol
-        freeTable(&table, tablelen);
 		return -1;
 	} else {
 		fprintf(stderr, "ERROR IN CHECKSYM\n");
-        freeTable(&table, tablelen);
 		exit(EXIT_FAILURE);
 	}
 };
