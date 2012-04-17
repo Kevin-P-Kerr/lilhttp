@@ -102,8 +102,8 @@ int RestartLex(struct lexer *lex) {
 };
 
 int Checksym(char *string) { // returns a symbol value if string is in table
-	struct SymTable table;
-	int i=0, tablelen=2;
+	static struct SymTable table;
+
 	table.table[0].key = malloc(4 * sizeof(char));
 	strcpy(table.table[0].key, "GET");
 	table.table[0].value = GET;
@@ -113,6 +113,8 @@ int Checksym(char *string) { // returns a symbol value if string is in table
 	table.table[2].key = malloc(4 * sizeof(char));
 	strcpy(table.table[2].key, ".js");
 	table.table[2].value = JS;
+
+	int i=0, tablelen=2;
 	while((strcmp(table.table[i].key, string)!=0) && i<=tablelen) {
 		++i;
 		fprintf(stderr, "Checksym i is %d\n", i);
