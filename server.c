@@ -236,9 +236,9 @@ int  ParseInitalLine(Token *tok, char *response, char *request, struct lexer *le
 			fprintf(stderr, "We Could Open The File\nThe Path Was\n%s\n", path);
 			free(tok->value);
 			free(tok);
-		//	tok=GetToken(request, lex);
-		//	if (tok->type==END)
-		//		return 1; // end the parse process
+			tok=GetToken(request, lex);
+			if (tok->type==END)
+			    return 1; // end the parse process
 			ParseHeaders(tok, response, request, lex, i);
 			DetermineDocType(path, response, i);
 			while(fgets(&response[*i], 124, resource)!=NULL) {
