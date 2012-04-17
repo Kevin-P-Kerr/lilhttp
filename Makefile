@@ -1,4 +1,4 @@
-CFLAGS=-g
+CFLAGS=-g -Wall
 
 clean:
 	rm -f server
