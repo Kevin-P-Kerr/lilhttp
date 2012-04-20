@@ -28,7 +28,8 @@ class Parser
 		@tokens = []
 	end
 	def parse(client)
-		input = client.read
+		input = client.gets
+#		input = self.openClient(client)
 		input = input.split if input!=nil
 		input.each {|i| 
 		tmp = @tokenList.find {|key, val| key == i}
@@ -43,7 +44,17 @@ class Parser
 	def tokens
 		@tokens
 	end
-end		
+	def openClient(client)
+		line = ""
+		lines = ""
+		while line = client.gets do
+			if line != ""
+				lines = lines + line
+			end
+		end
+		return lines
+	end
+end
 
 
 class HTTPHandler
@@ -92,6 +103,7 @@ threads = []
 $stderr.puts "server made\n"
 loop {
 	Thread.start(server.accept) do |session|
+		$stderr.puts "another session\n"
 		req = HTTPHandler.new(session)
 		req.parseRequest
 		req.buildResponse
