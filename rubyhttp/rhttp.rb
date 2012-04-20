@@ -2,17 +2,17 @@
 
 class Token
 	def initialize(key, val)	
-		@type = key
+		@cat = key
 		@value = val
 	end
-	def type
-		@type
+	def category
+		@cat
 	end
 	def value
 		@value
 	end
-	def type=(type)
-		@key = type
+	def cat=(type)
+		@cat = type
 	end
 	def value=(value)
 		@value = value
@@ -28,17 +28,16 @@ class Parser
 		@tokens = []
 	end
 	def parse(client)
-		input = []
-		input = client.gets.split(' ')
-		$stderr.puts input
+		input = client.read
+		input = input.split if input!=nil
 		input.each {|i| 
-		if @tokenList.find {|key, val| key == i}
-			val = @tokenList[i]
-			tok = Token.new(val, i)
-			@tokens.unshift(tok)
+		tmp = @tokenList.find {|key, val| key == i}
+		if tmp != nil
+			tok = Token.new(tmp[1], tmp[0])
+			@tokens.push(tok)
 		else 
 			tok = Token.new(135, i)
-			@tokens.unshift(tok)
+			@tokens.push(tok)
 		end	} 
 	end
 	def tokens
@@ -59,9 +58,7 @@ class HTTPHandler
 	def buildResponse
 
 		req = @parser.tokens
-		if req[0].type = 130
-			self.getResponse(req[1]) #its in the next token
-		end
+		self.getResponse(req[1]) if req[0].category == 130
 	end
 	def getResponse(token) 
 		path = token.value
