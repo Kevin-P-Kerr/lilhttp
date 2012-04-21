@@ -8,6 +8,9 @@
 #include <netinet/in.h>
 #include <time.h>
 #include <sys/epoll.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
 #define ON 1
 #define OFF 0
 #define END 128
@@ -313,7 +316,7 @@ int HandleResponse(int *fd, char *buf) {
 	return 1;
 };
 
-int Log(char *buf) {
+/*int Log(char *buf) {
 	int fd;
 	FILE *log;
 	if ((log=fopen("./log", "w"))==NULL) {
@@ -322,17 +325,16 @@ int Log(char *buf) {
 			exit(EXIT_FAILURE);
 		} log=fopen("./log", "w");
 	} fputs(buf, log);
-};
+}; */
 
-int MakeSocketNB (int sfd) {
+int MakeSocketNB (int *sfd) {
 	int flags, s;
-	flags = fnctl (sfd, F_GETFL, 0)
+	flags = fcntl (*sfd, F_GETFL, 0);
 	if (flags == -1) {
 		perror ("fcntl");
 		return -1;
-	}
-	flags |= O_NONBLOCK
-	s = fcntl(std, F_SETFL, flags)
+	} flags |= O_NONBLOCK;
+	s = fcntl(*sfd, F_SETFL, flags);
 	if (s == -1) {
 		perror ("fcntl2");
 		return -1;
@@ -340,9 +342,17 @@ int MakeSocketNB (int sfd) {
 	return 0;
 };
 
+int Createpoll(void) {
+	int fd;
+	if ((fd=epoll_create(SOMAXCONN))<0)
+		return -1;
+	else
+		return fd;
+};
+
 int main(int argc, char *argv[]) {
 	char *progname=argv[0];
-	int sockfd, newsockfd, portno, clilen, n, pid;
+	int sockfd, newsockfd, portno, clilen, n, pid, epollfd;
 	char buffer[BUFSIZ];
 	struct sockaddr_in serv_addr, cli_addr;
 	if (argc < 2 ) {
@@ -356,22 +366,50 @@ int main(int argc, char *argv[]) {
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
 	Bind(&sockfd, &serv_addr);
 	listen(sockfd, 5);
-	struct epoll_event *events = calloc(SOMAXCONN * sizeof(struct epoll_event));
-	while (1) {
+	struct epoll_event *events = calloc(SOMAXCONN,  sizeof(struct epoll_event));
+	struct epoll_event event;
+	MakeSocketNB(&sockfd);
+	event.events = EPOLLIN | EPOLLET;
+	event.data.fd = sockfd;
+	if ((epollfd = Createpoll())<0) {
+		fprintf(stderr, "epoll create error\n");
+		exit(EXIT_FAILURE);
+	} if (epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &event) == -1) {
+		fprintf(stderr, "error with epoll_ctl on sockfd");
+		exit(EXIT_FAILURE);
+	}while (1) {
 		int n, e; //e for events
-		e = epoll_wait(sockfd, events, SOMAXCONN, -1);
+		e = epoll_wait(epollfd, events, SOMAXCONN, -1);
 		for (n=0; n<e; n++) {
-			if (events[n] == ERROR)
-				handle the error and get back to the loop
-			else if (events[n] == new socket) {
-				accept and bind the socket
-				make the socket fd non blocking
-				return to the loop
-			} else if (events[n] == new data) {
-						write all the data to a buffer (we are in edge triggered mode)
-						handle(data)
-						return to loop
+			if ((events[n].events & EPOLLERR) || (events[n].events & EPOLLHUP) || !(events[n].events & EPOLLIN)) {
+				fprintf (stderr, "epoll error\n");
+				close (events[n].data.fd);
+				continue;
+			} else if (events[n].data.fd == sockfd) {
+				while (1) {
+					newsockfd=accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+					if (newsockfd>0) {
+						MakeSocketNB(&newsockfd);
+						fprintf(stderr, "Accepted a new connection on fd %d, made nonblocking\n", newsockfd);
+					} else if (errno == EAGAIN || errno == EWOULDBLOCK) {
+						fprintf (stderr, "we have accepted all the clients on this event");
+						break;
+					} event.data.fd = newsockfd;
+					event.events = EPOLLIN | EPOLLET;
+					if (epoll_ctl(epollfd, EPOLL_CTL_ADD, newsockfd, &event)<0) {
+						fprintf(stderr, "epoll_ctl error\n");
+						exit(EXIT_FAILURE);
+					}
+					continue;
+				}
+			} else { // there is stuff for us to read
+					fprintf(stderr, "we got to else\n");
+					HandleResponse(&events[n].data.fd, buffer);
+					fprintf(stderr, "we are about to close file descriptor %d\n", events[n].data.fd);
+					close (events[n].data.fd);
+					fprintf(stderr, "connection closed");
+					continue;
 			}
 		}
 	} exit(EXIT_SUCCESS);
-}; 
+};
