@@ -356,17 +356,22 @@ int main(int argc, char *argv[]) {
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
 	Bind(&sockfd, &serv_addr);
 	listen(sockfd, 5);
-	clilen = sizeof(cli_addr);
+	struct epoll_event *events = calloc(SOMAXCONN * sizeof(struct epoll_event));
 	while (1) {
-			Accept(&newsockfd, &sockfd, &cli_addr, &clilen);
-			if ((pid=fork())<0) {
-				fprintf(stderr, "%s, Forking Error\n", progname);
-				exit(EXIT_FAILURE);
-			} if (pid==0) {
-				HandleResponse(&newsockfd, buffer);
-				exit(EXIT_SUCCESS);
-			} else {
-				close(newsockfd);
+		int n, e; //e for events
+		e = epoll_wait(sockfd, events, SOMAXCONN, -1);
+		for (n=0; n<e; n++) {
+			if (events[n] == ERROR)
+				handle the error and get back to the loop
+			else if (events[n] == new socket) {
+				accept and bind the socket
+				make the socket fd non blocking
+				return to the loop
+			} else if (events[n] == new data) {
+						write all the data to a buffer (we are in edge triggered mode)
+						handle(data)
+						return to loop
+			}
 		}
 	} exit(EXIT_SUCCESS);
 }; 
