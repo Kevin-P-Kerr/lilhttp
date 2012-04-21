@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <time.h>
+#include <sys/epoll.h>
 #define ON 1
 #define OFF 0
 #define END 128
@@ -321,6 +322,22 @@ int Log(char *buf) {
 			exit(EXIT_FAILURE);
 		} log=fopen("./log", "w");
 	} fputs(buf, log);
+};
+
+int MakeSocketNB (int sfd) {
+	int flags, s;
+	flags = fnctl (sfd, F_GETFL, 0)
+	if (flags == -1) {
+		perror ("fcntl");
+		return -1;
+	}
+	flags |= O_NONBLOCK
+	s = fcntl(std, F_SETFL, flags)
+	if (s == -1) {
+		perror ("fcntl2");
+		return -1;
+	}
+	return 0;
 };
 
 int main(int argc, char *argv[]) {
