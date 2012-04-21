@@ -403,11 +403,10 @@ int main(int argc, char *argv[]) {
 					continue;
 				}
 			} else { // there is stuff for us to read
-					fprintf(stderr, "we got to else\n");
 					HandleResponse(&events[n].data.fd, buffer);
 					fprintf(stderr, "we are about to close file descriptor %d\n", events[n].data.fd);
 					close (events[n].data.fd);
-					fprintf(stderr, "connection closed");
+					fprintf(stderr, "connection closed\n");
 					continue;
 			}
 		}
