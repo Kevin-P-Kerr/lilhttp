@@ -33,12 +33,12 @@ struct lexer {
 };
 
 FILE *efopen(char *path) {
-	FILE *fd;
+	FILE *fp;
 	
-	if ((fd=fopen(path, "r"))==NULL){
+	if ((fp=fopen(path, "r"))==NULL){
 		fprintf(stderr, "ERROR COULD NOT OPEN %s\n", path);
 		exit(EXIT_FAILURE);
-	} return fd;
+	} return fp;
 };
 
 int CreateSocket(int *fd) {
@@ -245,7 +245,7 @@ int  ParseGet(Token *tok, char *response, char *request, struct lexer *lex, int 
 
 		while(fgets(&response[*i], 124, resource)!=NULL) {
 			*i = CountChar(response);
-		}
+		} //fclose(resource);
 		return 1;
 	}
 };
