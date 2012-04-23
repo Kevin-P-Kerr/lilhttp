@@ -32,13 +32,51 @@ struct lexer {
 	int flag;
 };
 
+struct Pair {
+	char *car;
+	FILE *cdr;
+	int flag;
+	int len;
+};
+
+struct FileTable {
+	struct Pair *pair;
+};
+
+int CheckFileTable(FILE *fp, char *path, struct FileTable *ft) {
+	int i;
+
+	if (ft->flag==0)
+		return 0;
+	else {
+		for (i=0; i<=ft->len ; i++) {
+			if ((strcmp(path, ft->pair[i].car)==0)) {
+				fp = ft->pair[i].cdr;
+				return 1;
+			}
+		} return 0;
+	}
+};
+	if (ft->flag==0) {
+		ft->pair=malloc(sizeof(struct Pair));
+		ft->pair[0].car=malloc(sizeof(char) * strlen(path));
+		ft->pair[0].cdr=malloc
+
+
 FILE *efopen(char *path) {
 	FILE *fp;
-	
-	if ((fp=fopen(path, "r"))==NULL){
-		fprintf(stderr, "ERROR COULD NOT OPEN %s\n", path);
-		exit(EXIT_FAILURE);
-	} return fp;
+	int i;
+	static struct fileTable ft;
+
+	if (i=CheckFileTable(fp, path, &ft))
+		return fp;
+	else {
+		if ((fp=fopen(path, "r"))==NULL){
+			fprintf(stderr, "ERROR COULD NOT OPEN %s\n", path);
+			exit(EXIT_FAILURE);
+		} if (i=setFileTable(i, fp, &ft))
+			return fp;
+	}
 };
 
 int CreateSocket(int *fd) {
