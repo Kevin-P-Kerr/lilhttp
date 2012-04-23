@@ -434,8 +434,16 @@ int main(int argc, char *argv[]) {
 						break;
 					} event.data.fd = newsockfd;
 					event.events = EPOLLIN | EPOLLET;
-					if (epoll_ctl(epollfd, EPOLL_CTL_ADD, newsockfd, &event)<0) {
-						fprintf(stderr, "epoll_ctl error\n");
+					if (epoll_ctl(epollfd, EPOLL_CTL_ADD, newsockfd, &event)<0) { 						fprintf(stderr, "\nepoll_ctl error\n");
+						if (errno == EEXIST)
+							fprintf(stderr, "fd already registered\n");
+						else if (errno == EBADF) {
+							fprintf(stderr, "\nfd bad\n%d\n", newsockfd);
+							break;
+						}else if (errno == ENOMEM)
+							fprintf(stderr, "\nno memory\n");
+						else if (errno == ENOSPC)
+							fprintf(stderr, "\n enospc\n");
 						exit(EXIT_FAILURE);
 					}
 					continue;
