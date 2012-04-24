@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <time.h>
 #include <sys/epoll.h>
@@ -32,52 +33,6 @@ struct lexer {
 	int flag;
 };
 
-struct Pair {
-	char *car;
-	FILE *cdr;
-	int flag;
-	int len;
-};
-
-struct FileTable {
-	struct Pair *pair;
-};
-
-int CheckFileTable(FILE *fp, char *path, struct FileTable *ft) {
-	int i;
-
-	if (ft->flag==0)
-		return 0;
-	else {
-		for (i=0; i<=ft->len ; i++) {
-			if ((strcmp(path, ft->pair[i].car)==0)) {
-				fp = ft->pair[i].cdr;
-				return 1;
-			}
-		} return 0;
-	}
-};
-	if (ft->flag==0) {
-		ft->pair=malloc(sizeof(struct Pair));
-		ft->pair[0].car=malloc(sizeof(char) * strlen(path));
-		ft->pair[0].cdr=malloc
-
-
-FILE *efopen(char *path) {
-	FILE *fp;
-	int i;
-	static struct fileTable ft;
-
-	if (i=CheckFileTable(fp, path, &ft))
-		return fp;
-	else {
-		if ((fp=fopen(path, "r"))==NULL){
-			fprintf(stderr, "ERROR COULD NOT OPEN %s\n", path);
-			exit(EXIT_FAILURE);
-		} if (i=setFileTable(i, fp, &ft))
-			return fp;
-	}
-};
 
 int CreateSocket(int *fd) {
 	if ((*fd = socket(AF_INET, SOCK_STREAM, 0))>=0)
@@ -108,7 +63,7 @@ int Accept(int *nsfd, int *sfd, struct sockaddr_in *cli_addr, int *clilen) {
 int Read(int *fd, char *buf, int buf_siz) {
 	if (read(*fd, buf, buf_siz)<0) {
 		fprintf(stderr, "Read Error\n");
-		exit(EXIT_FAILURE);
+		return 1; //keep on pushing
 	}else {
 		return 1;
 	}
@@ -309,24 +264,6 @@ int CheckRedirect(Token *tok, char *response, int *i) {
 	}return 0;
 };
 
-int Redirect(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
-	FILE *resource;
-	char *path;
-
-	path = malloc(sizeof(char) * strlen(tok->value)+1);
-	path[0] = '.';
-	strcpy(&path[1], tok->value);
-	resource = efopen(path);
-	strcpy(&response[*i], "HTTP/1.0 301 Moved Permamently\n");
-	*i = CountChar(response);
-	strcpy(&response[*i], tok->value);
-	*i = CountChar(response);
-	strcpy(&response[*i], "\n\n");
-	*i = CountChar(response);
-	LoadFile(resource, response, i);
-	return 1;
-};	
-		
 
 int BuildResponse(char *request, char *response, int *fd, int *i) {
 	struct lexer lex;
@@ -354,16 +291,6 @@ int HandleResponse(int *fd, char *buf) {
 	return 1;
 };
 
-/*int Log(char *buf) {
-	int fd;
-	FILE *log;
-	if ((log=fopen("./log", "w"))==NULL) {
-		if ((fd=creat("./log", "w"))<0) {
-			fprintf(stderr, "ERROR CREATING LOG FILE\n");
-			exit(EXIT_FAILURE);
-		} log=fopen("./log", "w");
-	} fputs(buf, log);
-}; */
 
 int MakeSocketNB (int *sfd) {
 	int flags, s;
