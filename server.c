@@ -27,6 +27,11 @@
 #define INTERP "./interp.html"
 #define INTERPJS "./scminterp.js"
 
+struct ftable {
+	char *path;
+	int fd;
+};
+
 typedef struct token {
 	int type;
 	char *value;
@@ -216,29 +221,14 @@ int HandleFileError(char *response, int *i) {
 	return 1;
 };
 
-int InResources(char *path) {
-		static int flag = OFF;
-		int home, interp, interpjs;
-
-	if (flag == OFF) {
-		home = open(HOME, O_RDONLY);
-		interp =  open(INTERP, O_RDONLY);
-		interpjs =  open(INTERPJS, O_RDONLY);
-		static struct ftable {
-			char *path;
-			int *fd;
-				ft[] = {HOME, home,
-						RINTERP, interp
-						RINTERPJS, interpjs}
-		};
-		flag = ON;
-	}
-
+int InResources(char *path, struct ftable *ft) {
+	static int flag = OFF;
+	int home, interp, interpjs;
 	int i=0, tablelen=2;
 	while(i<=tablelen) {
-		if (strcmp(table[i].path, path)==0)
+		if (strcmp(ft[i].path, path)==0)
         {
-            return table[i].fd;
+            return ft[i].fd;
         }
 		++i;
 	} if (i>tablelen) { // unable to find symbol
@@ -249,7 +239,7 @@ int InResources(char *path) {
 	}
 };
 
-int  ParseGet(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
+int  ParseGet(Token *tok, char *response, char *request, struct lexer *lex, int *i, struct ftable *ft) {
 	int rfd;
 	char *path, rfdbuf[BUFSIZ];
 	bzero(rfdbuf, BUFSIZ);
@@ -257,7 +247,8 @@ int  ParseGet(Token *tok, char *response, char *request, struct lexer *lex, int 
 	if (CheckRedirect(tok, response, i)) 
 		AddResponse(response, "HTTP/1.0 301 Moved Permamently\n", i);
 	path = malloc(sizeof(char) * strlen(tok->value));
-	if (!(rfd=InResources(path))) {
+	strcpy(path, tok->value);
+	if (!(rfd=InResources(path, ft))) {
 		HandleFileError(response, i);
 		return 1;
 	} AddResponse(response, "HTTP/1.0 200 OK\n", i);
@@ -292,7 +283,7 @@ int CheckRedirect(Token *tok, char *response, int *i) {
 };
 
 
-int BuildResponse(char *request, char *response, int *fd, int *i) {
+int BuildResponse(char *request, char *response, int *fd, int *i, struct ftable *ft) {
 	struct lexer lex;
 	lex.start = request;
 	lex.end = request;
@@ -300,19 +291,19 @@ int BuildResponse(char *request, char *response, int *fd, int *i) {
 	Token *tok;
 	tok = GetToken(request, &lex);
 	if (tok->type == GET) { // begin dispatching on token type
-		ParseGet(tok, response, request, &lex, i);
+		ParseGet(tok, response, request, &lex, i, ft);
 	} fprintf(stderr, "%s\n", tok->value);
 	fprintf(stderr, "%d\n", tok->type);
 	return 1;
 };
 
-int HandleResponse(int *fd, char *buf) {
+int HandleResponse(int *fd, char *buf, struct ftable *ft) {
 	char retbuf[(4 * BUFSIZ)+1];
 	int i=0; // index into retbuf
 	Read(fd, buf, BUFSIZ);
 	fprintf(stderr,"We are in HANDLERESPONSE\nTHE REUQEST IS\n%s\n", buf);
 	memset(retbuf, '\0', (4*BUFSIZ)+1);
-	BuildResponse(buf, retbuf, fd, &i);
+	BuildResponse(buf, retbuf, fd, &i, ft);
 	fprintf(stderr, "We are in HANDLERESPONSE\nTHE REPSONSE IS\n%s\n", retbuf);
 	Write(fd, retbuf, i);
 	return 1;
@@ -342,11 +333,28 @@ int Createpoll(void) {
 		return fd;
 };
 
+struct ftable *InitFt(void) {
+	struct ftable *ft;
+	ft = malloc(sizeof(struct ftable) * 3);
+	ft[0].path = malloc(sizeof(char) *  strlen(INDEX));
+	strcpy(ft[0].path, INDEX);
+	ft[0].fd =  open(HOME, O_RDONLY);
+	ft[1].path = malloc(sizeof(char) * strlen( RINTERP));
+	strcpy(ft[1].path, RINTERP);
+	ft[1].fd = open(INTERP, O_RDONLY);
+	ft[2].path = malloc(sizeof(char) * strlen(RINTERPJS));
+	strcpy(ft[2].path, RINTERPJS);
+	ft[2].fd =  open(INTERPJS, O_RDONLY);
+	return ft;
+};
+
 int main(int argc, char *argv[]) {
 	char *progname=argv[0];
 	int sockfd, newsockfd, portno, clilen, n, pid, epollfd;
 	char buffer[BUFSIZ];
 	struct sockaddr_in serv_addr, cli_addr;
+	struct ftable *ft;
+	ft = InitFt();
 	if (argc < 2 ) {
 		fprintf(stderr, "\nERROR: No Port Provided\n");
 		exit(EXIT_FAILURE);
@@ -403,7 +411,7 @@ int main(int argc, char *argv[]) {
 					continue;
 				}
 			} else { // there is stuff for us to read
-					HandleResponse(&events[n].data.fd, buffer);
+					HandleResponse(&events[n].data.fd, buffer, ft);
 					fprintf(stderr, "we are about to close file descriptor %d\n", events[n].data.fd);
 					close (events[n].data.fd);
 					fprintf(stderr, "connection closed\n");
