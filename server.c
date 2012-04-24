@@ -21,6 +21,11 @@
 #define JS 132
 #define INDEX "/index.html"
 #define ROOT "/"
+#define RINTERP "/interp.html"
+#define RINTERPJS "/scminterp.js"
+#define HOME "./index.html"
+#define INTERP "./interp.html"
+#define INTERPJS "./scminterp.js"
 
 typedef struct token {
 	int type;
@@ -211,6 +216,39 @@ int HandleFileError(char *response, int *i) {
 	return 1;
 };
 
+int InResources(char *path) {
+		static int flag = OFF;
+		int home, interp, interpjs;
+
+	if (flag == OFF) {
+		home = open(HOME, O_RDONLY);
+		interp =  open(INTERP, O_RDONLY);
+		interpjs =  open(INTERPJS, O_RDONLY);
+		static struct ftable {
+			char *path;
+			int *fd;
+				ft[] = {HOME, home,
+						RINTERP, interp
+						RINTERPJS, interpjs}
+		};
+		flag = ON;
+	}
+
+	int i=0, tablelen=2;
+	while(i<=tablelen) {
+		if (strcmp(table[i].path, path)==0)
+        {
+            return table[i].fd;
+        }
+		++i;
+	} if (i>tablelen) { // unable to find symbol
+		return 0;
+	} else {
+		fprintf(stderr, "ERROR IN CHECKSYM\n");
+		exit(EXIT_FAILURE);
+	}
+};
+
 int  ParseGet(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
 	int rfd;
 	char *path, rfdbuf[BUFSIZ];
@@ -219,21 +257,14 @@ int  ParseGet(Token *tok, char *response, char *request, struct lexer *lex, int 
 	if (CheckRedirect(tok, response, i)) 
 		AddResponse(response, "HTTP/1.0 301 Moved Permamently\n", i);
 	path = malloc(sizeof(char) * strlen(tok->value));
-	if (tok->value[0] != '.') {
-		path[0] = '.';
-		strcpy(&path[1], tok->value);
-	} else {
-		strcpy(path, tok->value);
-	} if ((rfd=open(path, S_IRUSR))<0) {
+	if (!(rfd=InResources(path))) {
 		HandleFileError(response, i);
 		return 1;
 	} AddResponse(response, "HTTP/1.0 200 OK\n", i);
 	DetermineDocType(path, response, i);
-	Read(&rfd, rfdbuf, BUFSIZ-1);
+	pread(rfd, rfdbuf, BUFSIZ-1, 0);
 	AddResponse(response, rfdbuf, i);
-	if (close(rfd)<0) {
-		fprintf(stderr, "problem closing resource file\n");
-	} free(path);
+	free(path);
 	free(tok->value);
 	free(tok);
 	return 1;
