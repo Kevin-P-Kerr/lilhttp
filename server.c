@@ -199,48 +199,44 @@ int CountChar(char *buf){
 	return nc;
 };
 
-int LoadFile(FILE *resource, char *response, int *i) {
-		while(fgets(&response[*i], 124, resource)!=NULL) {
-			*i = CountChar(response);
-		}
-		return 1;
+int AddResponse(char *response, char *src, int *i) {
+	strcpy(&response[*i], src);
+	*i = CountChar(response);
+	return 1;
+};
+
+int HandleFileError(char *response, int *i) {
+	AddResponse(response, "HTTP/1.0 404 Not Found\n\n", i);
+	AddResponse(response, "<!DOCTYPE HTML><html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1></body></html>", i);
+	return 1;
 };
 
 int  ParseGet(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
-	FILE *resource;
-	char buf[BUFSIZ], *path;
+	int rfd;
+	char *path, rfdbuf[BUFSIZ];
+	bzero(rfdbuf, BUFSIZ);
 
-	if (CheckRedirect(tok, response, i)) {
-		Redirect(tok, response, request, lex, i);
-		return 1;
-	}path = malloc(strlen(tok->value)+1 * sizeof(char));
-	path[0] = '.';
-	strcpy(&path[1], tok->value);
-	if ((resource=fopen(path, "r"))==NULL) {
-		fprintf(stderr, "We Could Not Open The File\nThe Path Was\n%s\n", path);
-		strcpy(response, "HTTP/1.0 404 Not Found\n\n<!DOCTYPE HTML> <html> <head> <title>404:Could Not Find File</title> </head> <h1> 404: Could Not Find File </h1> </body> </html>");
-		*i = CountChar(response);
-		free(tok->value);
-		free(tok);
-		return 1; 
+	if (CheckRedirect(tok, response, i)) 
+		AddResponse(response, "HTTP/1.0 301 Moved Permamently\n", i);
+	path = malloc(sizeof(char) * strlen(tok->value));
+	if (tok->value[0] != '.') {
+		path[0] = '.';
+		strcpy(&path[1], tok->value);
 	} else {
-		strcpy(response, "HTTP/1.0 200 OK\n");
-		*i = CountChar(response);
-		fprintf(stderr, "We Could Open The File\nThe Path Was\n%s\n", path);
-		free(tok->value);
-		free(tok);
-		tok=GetToken(request, lex);
-		if (tok->type==END)
-			return 1; // end the parse process
-		ParseHeaders(tok, response, request, lex, i);
-		DetermineDocType(path, response, i);
-		LoadFile(resource, response, i);
-
-		while(fgets(&response[*i], 124, resource)!=NULL) {
-			*i = CountChar(response);
-		} //fclose(resource);
+		strcpy(path, tok->value);
+	} if ((rfd=open(path, S_IRUSR))<0) {
+		HandleFileError(response, i);
 		return 1;
-	}
+	} AddResponse(response, "HTTP/1.0 200 OK\n", i);
+	DetermineDocType(path, response, i);
+	Read(&rfd, rfdbuf, BUFSIZ-1);
+	AddResponse(response, rfdbuf, i);
+	if (close(rfd)<0) {
+		fprintf(stderr, "problem closing resource file\n");
+	} free(path);
+	free(tok->value);
+	free(tok);
+	return 1;
 };
 
 int CheckRedirect(Token *tok, char *response, int *i) {
