@@ -19,13 +19,6 @@
 #define OTHER 130
 #define HTML 131
 #define JS 132
-#define INDEX "/index.html"
-#define ROOT "/"
-#define RINTERP "/interp.html"
-#define RINTERPJS "/scminterp.js"
-#define HOME "./index.html"
-#define INTERP "./interp.html"
-#define INTERPJS "./scminterp.js"
 
 struct ftable {
 	char *path;
@@ -244,8 +237,8 @@ int  ParseGet(Token *tok, char *response, char *request, struct lexer *lex, int 
 	char *path, rfdbuf[BUFSIZ];
 	bzero(rfdbuf, BUFSIZ);
 
-	if (CheckRedirect(tok, response, i)) 
-		AddResponse(response, "HTTP/1.0 301 Moved Permamently\n", i);
+//	if (CheckRedirect(tok, response, i))
+//		AddResponse(response, "HTTP/1.0 301 Moved Permamently\n", i);
 	path = malloc(sizeof(char) * strlen(tok->value));
 	strcpy(path, tok->value);
 	if (!(rfd=InResources(path, ft))) {
@@ -261,7 +254,7 @@ int  ParseGet(Token *tok, char *response, char *request, struct lexer *lex, int 
 	return 1;
 };
 
-int CheckRedirect(Token *tok, char *response, int *i) {
+/*int CheckRedirect(Token *tok, char *response, int *i) {
 	static struct pair {
 		char *key;
 		char *value;
@@ -280,7 +273,7 @@ int CheckRedirect(Token *tok, char *response, int *i) {
 			return 1;
 		} ++n;
 	}return 0;
-};
+}; */ //this will be taken care of once config files are working
 
 
 int BuildResponse(char *request, char *response, int *fd, int *i, struct ftable *ft) {
@@ -333,19 +326,44 @@ int Createpoll(void) {
 		return fd;
 };
 
-struct ftable *InitFt(void) {
-	struct ftable *ft;
-	ft = malloc(sizeof(struct ftable) * 3);
-	ft[0].path = malloc(sizeof(char) *  strlen(INDEX));
-	strcpy(ft[0].path, INDEX);
-	ft[0].fd =  open(HOME, O_RDONLY);
-	ft[1].path = malloc(sizeof(char) * strlen( RINTERP));
-	strcpy(ft[1].path, RINTERP);
-	ft[1].fd = open(INTERP, O_RDONLY);
-	ft[2].path = malloc(sizeof(char) * strlen(RINTERPJS));
-	strcpy(ft[2].path, RINTERPJS);
-	ft[2].fd =  open(INTERPJS, O_RDONLY);
-	return ft;
+char *getFile(char *buf) { //gets file paths out of a config file
+	static int i=0;
+	int temp = i;
+	char *path;
+	if (buf[i]==EOF)
+		return -1;
+	while (buf[i]!=' ' && buf[i]!=EOF) {
+		i++;
+	};
+	path = malloc(sizeof(char) * (i-temp));
+	while (temp<=i) {
+		path[temp] = buf[temp];
+		++temp;
+	} return path;
+};
+
+int fconfig(char *buf, struct ftable *ft) {
+	char *f;
+	int i=1;
+	while ((f=getFile(buf))>0) {
+		ft = realloc(ft, sizeof(struct ftable) * i);
+		ft[i-1].path = malloc(sizeof(char) * strlen(f));
+		ft[i-1].fd = open(f,O_RDONLY);
+		strcpy(ft[i-1].path, f);
+		free(f);
+		i++;
+	} return 1;
+};
+
+int cconfig(int argc, char *argv[], struct ftable *ft) {
+	int i=0;
+	ft = malloc(sizeof(struct ftable) * argc-1);
+	while(i<=argc-1) {
+		ft[i].path = malloc(sizeof(char) * strlen(argv[i]));
+		strcpy(ft[i].path, argv[i]);
+		ft[i].fd = open(argv[i], O_RDONLY);
+		i++;
+	}
 };
 
 int main(int argc, char *argv[]) {
@@ -354,10 +372,17 @@ int main(int argc, char *argv[]) {
 	char buffer[BUFSIZ];
 	struct sockaddr_in serv_addr, cli_addr;
 	struct ftable *ft;
-	ft = InitFt();
-	if (argc < 2 ) {
-		fprintf(stderr, "\nERROR: No Port Provided\n");
+	if (argc<3) {
+		fprintf(stderr, "LilHttp: -flag [config file] [files] port no\n");
 		exit(EXIT_FAILURE);
+	}if (argv[1][1] == 'f') { // there is a config file
+		int cfd = open(argv[1], O_RDONLY);
+		char cbuf[BUFSIZ];
+		bzero(cbuf, BUFSIZ);
+		Read(&cfd, cbuf, BUFSIZ-1);
+		fconfig(cbuf, ft);
+	} else if (argv[1][1] == 'c') {
+		cconfig(argc, argv, ft);
 	} if(!CreateSocket(&sockfd)) {
 		fprintf(stderr, "%s ERROR, COULD NOT CREATE SERVER SOCKET\n", progname);
 		exit(EXIT_FAILURE);
