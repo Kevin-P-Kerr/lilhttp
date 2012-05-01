@@ -19,17 +19,15 @@
 #define OTHER 130
 #define HTML 131
 #define JS 132
-#define INDEX "/index.html"
-#define ROOT "/"
-#define RINTERP "/interp.html"
-#define RINTERPJS "/scminterp.js"
-#define HOME "./index.html"
-#define INTERP "./interp.html"
-#define INTERPJS "./scminterp.js"
 
-struct ftable {
+struct table {
 	char *path;
 	int fd;
+};
+
+struct ftable {
+	struct table *table;
+	int size;
 };
 
 typedef struct token {
@@ -43,6 +41,7 @@ struct lexer {
 	int flag;
 };
 
+struct ftable ft;
 
 int CreateSocket(int *fd) {
 	if ((*fd = socket(AF_INET, SOCK_STREAM, 0))>=0)
@@ -184,7 +183,10 @@ int ParseHeaders(Token *tok, char *response, char *request, struct lexer *lex, i
 int DetermineDocType(char *path, char *response, int *i) {
 	int n=1;
 	char *tmp;
-	while (path[n]!='.') {
+	if (strlen(path)<=2) {
+		strcpy(&response[*i], "Content-Type: text; charset=utf-8\n\n");
+		return 1;
+	}while (path[n]!='.') {
 		n++;
 	}
 	tmp = malloc((strlen(path)-n) * sizeof(char));
@@ -221,34 +223,54 @@ int HandleFileError(char *response, int *i) {
 	return 1;
 };
 
-int InResources(char *path, struct ftable *ft) {
+int tryFile(char *path) {
+	int fd;
+	fd = open(path, O_RDONLY);
+	if (fd>0) {
+		ft.table = realloc(ft.table, (++ft.size * sizeof(struct table)));
+		ft.table[ft.size-1].path = malloc(sizeof(char) *  strlen(path));
+		strcpy(ft.table[ft.size-1].path, path);
+		ft.table[ft.size-1].fd = fd;
+		return fd;
+	} else
+		return -1;
+
+};
+
+int InResources(char *path) {
 	static int flag = OFF;
 	int home, interp, interpjs;
-	int i=0, tablelen=2;
+	int i=0, tablelen= ft.size;
 	while(i<=tablelen) {
-		if (strcmp(ft[i].path, path)==0)
+		if (strcmp(ft.table[i].path, path)==0)
         {
-            return ft[i].fd;
+            return ft.table[i].fd;
         }
 		++i;
 	} if (i>tablelen) { // unable to find symbol
-		return 0;
+		i = tryFile(path);
+		if (i>=0) 
+			return i;
+		else {
+			return 0;
+		}
 	} else {
 		fprintf(stderr, "ERROR IN CHECKSYM\n");
 		exit(EXIT_FAILURE);
 	}
 };
 
-int  ParseGet(Token *tok, char *response, char *request, struct lexer *lex, int *i, struct ftable *ft) {
+int  ParseGet(Token *tok, char *response, char *request, struct lexer *lex, int *i) {
 	int rfd;
 	char *path, rfdbuf[BUFSIZ];
 	bzero(rfdbuf, BUFSIZ);
 
-	if (CheckRedirect(tok, response, i)) 
-		AddResponse(response, "HTTP/1.0 301 Moved Permamently\n", i);
-	path = malloc(sizeof(char) * strlen(tok->value));
-	strcpy(path, tok->value);
-	if (!(rfd=InResources(path, ft))) {
+//	if (CheckRedirect(tok, response, i))
+//		AddResponse(response, "HTTP/1.0 301 Moved Permamently\n", i);
+	path = malloc(sizeof(char) * strlen(tok->value)+1);
+	path[0] = '.';
+	strcpy(&path[1], tok->value);
+	if (!(rfd=InResources(path))) {
 		HandleFileError(response, i);
 		return 1;
 	} AddResponse(response, "HTTP/1.0 200 OK\n", i);
@@ -261,7 +283,7 @@ int  ParseGet(Token *tok, char *response, char *request, struct lexer *lex, int 
 	return 1;
 };
 
-int CheckRedirect(Token *tok, char *response, int *i) {
+/*int CheckRedirect(Token *tok, char *response, int *i) {
 	static struct pair {
 		char *key;
 		char *value;
@@ -280,10 +302,10 @@ int CheckRedirect(Token *tok, char *response, int *i) {
 			return 1;
 		} ++n;
 	}return 0;
-};
+}; */
 
 
-int BuildResponse(char *request, char *response, int *fd, int *i, struct ftable *ft) {
+int BuildResponse(char *request, char *response, int *fd, int *i) {
 	struct lexer lex;
 	lex.start = request;
 	lex.end = request;
@@ -291,19 +313,19 @@ int BuildResponse(char *request, char *response, int *fd, int *i, struct ftable 
 	Token *tok;
 	tok = GetToken(request, &lex);
 	if (tok->type == GET) { // begin dispatching on token type
-		ParseGet(tok, response, request, &lex, i, ft);
+		ParseGet(tok, response, request, &lex, i);
 	} fprintf(stderr, "%s\n", tok->value);
 	fprintf(stderr, "%d\n", tok->type);
 	return 1;
 };
 
-int HandleResponse(int *fd, char *buf, struct ftable *ft) {
+int HandleResponse(int *fd, char *buf) {
 	char retbuf[(4 * BUFSIZ)+1];
 	int i=0; // index into retbuf
 	Read(fd, buf, BUFSIZ);
 	fprintf(stderr,"We are in HANDLERESPONSE\nTHE REUQEST IS\n%s\n", buf);
 	memset(retbuf, '\0', (4*BUFSIZ)+1);
-	BuildResponse(buf, retbuf, fd, &i, ft);
+	BuildResponse(buf, retbuf, fd, &i);
 	fprintf(stderr, "We are in HANDLERESPONSE\nTHE REPSONSE IS\n%s\n", retbuf);
 	Write(fd, retbuf, i);
 	return 1;
@@ -333,19 +355,12 @@ int Createpoll(void) {
 		return fd;
 };
 
-struct ftable *InitFt(void) {
-	struct ftable *ft;
-	ft = malloc(sizeof(struct ftable) * 3);
-	ft[0].path = malloc(sizeof(char) *  strlen(INDEX));
-	strcpy(ft[0].path, INDEX);
-	ft[0].fd =  open(HOME, O_RDONLY);
-	ft[1].path = malloc(sizeof(char) * strlen( RINTERP));
-	strcpy(ft[1].path, RINTERP);
-	ft[1].fd = open(INTERP, O_RDONLY);
-	ft[2].path = malloc(sizeof(char) * strlen(RINTERPJS));
-	strcpy(ft[2].path, RINTERPJS);
-	ft[2].fd =  open(INTERPJS, O_RDONLY);
-	return ft;
+void initFt(void) {
+	ft.size = 0;
+	ft.table = malloc(sizeof(struct table));
+	ft.table[0].path = malloc(sizeof(char));
+	*ft.table[0].path = 'g';
+	ft.table[0].fd = -1;
 };
 
 int main(int argc, char *argv[]) {
@@ -353,8 +368,7 @@ int main(int argc, char *argv[]) {
 	int sockfd, newsockfd, portno, clilen, n, pid, epollfd;
 	char buffer[BUFSIZ];
 	struct sockaddr_in serv_addr, cli_addr;
-	struct ftable *ft;
-	ft = InitFt();
+	initFt();
 	if (argc < 2 ) {
 		fprintf(stderr, "\nERROR: No Port Provided\n");
 		exit(EXIT_FAILURE);
@@ -411,7 +425,7 @@ int main(int argc, char *argv[]) {
 					continue;
 				}
 			} else { // there is stuff for us to read
-					HandleResponse(&events[n].data.fd, buffer, ft);
+					HandleResponse(&events[n].data.fd, buffer);
 					fprintf(stderr, "we are about to close file descriptor %d\n", events[n].data.fd);
 					close (events[n].data.fd);
 					fprintf(stderr, "connection closed\n");
