@@ -19,7 +19,7 @@
 #define OTHER 130
 #define HTML 131
 #define JS 132
-
+// declare structs
 struct table {
 	char *path;
 	int fd;
@@ -42,187 +42,39 @@ struct lexer {
 };
 
 struct ftable ft;
+//declare functions
 
-int createSocket(int *fd) {
-	if ((*fd = socket(AF_INET, SOCK_STREAM, 0))>=0)
-		return 1;
-	else {
-		exit(EXIT_FAILURE);
-	}
-};
+int createSocket(int *);
 
-int Bind(int *fd, struct sockaddr_in *skaddr) {
-	if (bind(*fd, (struct sockaddr *) skaddr, sizeof(*skaddr))<0) {
-		fprintf(stderr, "BIND ERROR\n");
-		exit(EXIT_FAILURE);
-	} else {
-		return 1;
-	}
-};
+int Bind(int *, struct sockaddr_in *);
 
-int Accept(int *nsfd, int *sfd, struct sockaddr_in *cli_addr, int *clilen) {
-	if ((*nsfd = accept(*sfd, (struct sockaddr *) cli_addr, clilen))<0) {
-		fprintf(stderr, "ACCEPT ERROR\n");
-		exit(EXIT_FAILURE);
-	} else {
-		return 1;
-	}
-};
+int Accept(int *, int *, struct sockaddr_in *, int *);
 
-int Read(int *fd, char *buf, int buf_siz) {
-	if (read(*fd, buf, buf_siz)<0) {
-		fprintf(stderr, "Read Error\n");
-		return 1; //keep on pushing
-	}else {
-		return 1;
-	}
-};
+int Read(int *, char *, int);
 
-int Write(int *fd, char *msg, int len) {
-	if (write(*fd, msg, len)<0) {
-		fprintf(stderr, "Write Error\n");
-		exit(EXIT_FAILURE);
-	} else {
-		return 1;
-	}
-};
+int Write(int *, char *, int);
 
-int getDiff(struct lexer *lex) {
-	lex->start = lex->end;
-	int i=0;
-	if (*lex->end==EOF || *lex->end=='\0') {
-		fprintf(stderr, "LEX ERROR, LEXER.END IS ON EOF OR 0\n");
-		exit(EXIT_FAILURE);
-	} else {
-		for (*lex->end; *lex->end!=' ' && *lex->end!='\n' && *lex->end!=EOF && *lex->end!='\0'; ++lex->end) {
-			fprintf(stderr, "%d\n", i);
-			i++;
-	}
-	} return 1;
-};
+int getDiff(struct lexer *);
 
-int restartLex(struct lexer *lex) {
-	while (*lex->end==' ' || *lex->end=='\n') {
-		++lex->end;
-		if (*lex->end=='\0' || *lex->end==EOF) {
-			} return 1;
-	}return 1;
-};
+int restartLex(struct lexer *);
 
+Token *getToken(char *, struct lexer *);
 
-Token *getToken(char *request, struct lexer *lex) {
-	int diff, n;
-	char *tmp;
-	Token *tok = malloc(sizeof(Token));
-	if (lex->flag==ON) { // get the lexer back on track
-		restartLex(lex);
-	}
-	lex->flag = ON;
-	if (*lex->end==EOF || *lex->end=='\0') { //check if we're at end of input
-		tok->type=END;
-		tok->value = malloc(sizeof(char));
-		*tok->value = *lex->end;
-		return tok;
-	} getDiff(lex);
-	diff = lex->end - lex->start;
-	tmp = malloc(diff+1 * sizeof(char));
-	strncpy(tmp, lex->start, diff);
-	tmp[diff+1] = '\0';
-	if((n=Checksym(tmp))<0) {
-		tok->type = OTHER;
-		tok->value = malloc(diff+1 * sizeof(char));
-		strcpy(tok->value, tmp);
-		free(tmp);
-		return tok;
-	} tok->type=n; //otherwise, the type is defined in the symbol table
-	restartLex(lex);
-	getDiff(lex);
-	diff = lex->end - lex->start;
-	free(tmp);
-	tmp = malloc(diff+1 * sizeof(char));
-	strncpy(tmp, lex->start, diff);
-	tmp[diff+1] = '\0';
-	tok->value = malloc(diff+1 * sizeof(char));
-	strcpy(tok->value, tmp);
-	free(tmp);
-	return tok;
-};
+int determineDocType(char *, char *, int *);
 
-int determineDocType(char *path, char *response, int *i) {
-	int n=1;
-	char *tmp;
-	if (strlen(path)<=2) {
-		strcpy(&response[*i], "Content-Type: text; charset=utf-8\n\n");
-		return 1;
-	}while (path[n]!='.') {
-		n++;
-	}
-	tmp = malloc((strlen(path)-n) * sizeof(char));
-	strcpy(tmp, &path[n]);
-	if((n=Checksym(tmp))<0) {
-		fprintf(stderr, "FILE TYPE NOT SUPPORTED\n");
-		exit(EXIT_FAILURE);
-	}if (n==HTML) {
-		strcpy(&response[*i], "Content-Type: text/html; charset=utf-8\n\n");
-		*i = countChar(response);
-	}else if (n==JS) {
-		strcpy(&response[*i], "Content-Type: text/javascript; charset=utf-8\n\n");
-		*i = countChar(response);
-	} return 1;
-};
+int countChar(char *);
 
-int countChar(char *buf){
-	int nc=0;
-	while(buf[nc]!='\0') {
-		nc++;
-	}
-	return nc;
-};
+int addResponse(char *, char*, int *);
 
-int addResponse(char *response, char *src, int *i) {
-	strcpy(&response[*i], src);
-	*i = countChar(response);
-	return 1;
-};
+int handleFileError(char *, int *);
 
-int handleFileError(char *response, int *i) {
-	addResponse(response, "HTTP/1.0 404 Not Found\n\n", i);
-	addResponse(response, "<!DOCTYPE HTML><html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1></body></html>", i);
-	return 1;
-};
+int makeSocketNB(int *);
 
+int createpoll(void);
 
-int makeSocketNB (int *sfd) {
-	int flags, s;
-	flags = fcntl (*sfd, F_GETFL, 0);
-	if (flags == -1) {
-		perror ("fcntl");
-		return -1;
-	} flags |= O_NONBLOCK;
-	s = fcntl(*sfd, F_SETFL, flags);
-	if (s == -1) {
-		perror ("fcntl2");
-		return -1;
-	}
-	return 0;
-};
+void initFt(void);
 
-int createpoll(void) {
-	int fd;
-	if ((fd=epoll_create(SOMAXCONN))<0)
-		return -1;
-	else
-		return fd;
-};
-
-void initFt(void) {
-	ft.size = 0;
-	ft.table = malloc(sizeof(struct table));
-	ft.table[0].path = malloc(sizeof(char));
-	*ft.table[0].path = 'g';
-	ft.table[0].fd = -1;
-};
-
+//main 
 int main(int argc, char *argv[]) {
 	char *progname=argv[0];
 	int sockfd, newsockfd, portno, clilen, n, pid, epollfd;
@@ -285,7 +137,7 @@ int main(int argc, char *argv[]) {
 					continue;
 				}
 			} else { // there is stuff for us to read
-					HandleResponse(&events[n].data.fd, buffer);
+					handleResponse(&events[n].data.fd, buffer);
 					fprintf(stderr, "we are about to close file descriptor %d\n", events[n].data.fd);
 					close (events[n].data.fd);
 					fprintf(stderr, "connection closed\n");
@@ -293,4 +145,184 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	} exit(EXIT_SUCCESS);
+};
+// function definitons
+// socket creation and binding
+int createSocket(int *fd) {
+	if ((*fd = socket(AF_INET, SOCK_STREAM, 0))>=0)
+		return 1;
+	else {
+		exit(EXIT_FAILURE);
+	}
+};
+
+int Bind(int *fd, struct sockaddr_in *skaddr) {
+	if (bind(*fd, (struct sockaddr *) skaddr, sizeof(*skaddr))<0) {
+		fprintf(stderr, "BIND ERROR\n");
+		exit(EXIT_FAILURE);
+	} else {
+		return 1;
+	}
+};
+
+int Accept(int *nsfd, int *sfd, struct sockaddr_in *cli_addr, int *clilen) {
+	if ((*nsfd = accept(*sfd, (struct sockaddr *) cli_addr, clilen))<0) {
+		fprintf(stderr, "ACCEPT ERROR\n");
+		exit(EXIT_FAILURE);
+	} else {
+		return 1;
+	}
+};
+
+int makeSocketNB (int *sfd) {
+	int flags, s;
+	flags = fcntl (*sfd, F_GETFL, 0);
+	if (flags == -1) {
+		perror ("fcntl");
+		return -1;
+	} flags |= O_NONBLOCK;
+	s = fcntl(*sfd, F_SETFL, flags);
+	if (s == -1) {
+		perror ("fcntl2");
+		return -1;
+	}
+	return 0;
+};
+
+int createpoll(void) {
+	int fd;
+	if ((fd=epoll_create(SOMAXCONN))<0)
+		return -1;
+	else
+		return fd;
+};
+// file handling
+void initFt(void) {
+	ft.size = 0;
+	ft.table = malloc(sizeof(struct table));
+	ft.table[0].path = malloc(sizeof(char));
+	*ft.table[0].path = 'g';
+	ft.table[0].fd = -1;
+};
+
+int Read(int *fd, char *buf, int buf_siz) {
+	if (read(*fd, buf, buf_siz)<0) {
+		fprintf(stderr, "Read Error\n");
+		return 1; //keep on pushing
+	}else {
+		return 1;
+	}
+};
+
+int Write(int *fd, char *msg, int len) {
+	if (write(*fd, msg, len)<0) {
+		fprintf(stderr, "Write Error\n");
+		exit(EXIT_FAILURE);
+	} else {
+		return 1;
+	}
+};
+
+int handleFileError(char *response, int *i) {
+	addResponse(response, "HTTP/1.0 404 Not Found\n\n", i);
+	addResponse(response, "<!DOCTYPE HTML><html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1></body></html>", i);
+	return 1;
+};
+//Lexing
+int getDiff(struct lexer *lex) {
+	lex->start = lex->end;
+	int i=0;
+	if (*lex->end==EOF || *lex->end=='\0') {
+		fprintf(stderr, "LEX ERROR, LEXER.END IS ON EOF OR 0\n");
+		exit(EXIT_FAILURE);
+	} else {
+		for (*lex->end; *lex->end!=' ' && *lex->end!='\n' && *lex->end!=EOF && *lex->end!='\0'; ++lex->end) {
+			fprintf(stderr, "%d\n", i);
+			i++;
+	}
+	} return 1;
+};
+
+int restartLex(struct lexer *lex) {
+	while (*lex->end==' ' || *lex->end=='\n') {
+		++lex->end;
+		if (*lex->end=='\0' || *lex->end==EOF) {
+			} return 1;
+	}return 1;
+};
+
+
+Token *getToken(char *request, struct lexer *lex) {
+	int diff, n;
+	char *tmp;
+	Token *tok = malloc(sizeof(Token));
+	if (lex->flag==ON) { // get the lexer back on track
+		restartLex(lex);
+	}
+	lex->flag = ON;
+	if (*lex->end==EOF || *lex->end=='\0') { //check if we're at end of input
+		tok->type=END;
+		tok->value = malloc(sizeof(char));
+		*tok->value = *lex->end;
+		return tok;
+	} getDiff(lex);
+	diff = lex->end - lex->start;
+	tmp = malloc(diff+1 * sizeof(char));
+	strncpy(tmp, lex->start, diff);
+	tmp[diff+1] = '\0';
+	if((n=Checksym(tmp))<0) {
+		tok->type = OTHER;
+		tok->value = malloc(diff+1 * sizeof(char));
+		strcpy(tok->value, tmp);
+		free(tmp);
+		return tok;
+	} tok->type=n; //otherwise, the type is defined in the symbol table
+	restartLex(lex);
+	getDiff(lex);
+	diff = lex->end - lex->start;
+	free(tmp);
+	tmp = malloc(diff+1 * sizeof(char));
+	strncpy(tmp, lex->start, diff);
+	tmp[diff+1] = '\0';
+	tok->value = malloc(diff+1 * sizeof(char));
+	strcpy(tok->value, tmp);
+	free(tmp);
+	return tok;
+};
+//request parsing and response building
+int determineDocType(char *path, char *response, int *i) {
+	int n=1;
+	char *tmp;
+	if (strlen(path)<=2) {
+		strcpy(&response[*i], "Content-Type: text; charset=utf-8\n\n");
+		return 1;
+	}while (path[n]!='.') {
+		n++;
+	}
+	tmp = malloc((strlen(path)-n) * sizeof(char));
+	strcpy(tmp, &path[n]);
+	if((n=Checksym(tmp))<0) {
+		fprintf(stderr, "FILE TYPE NOT SUPPORTED\n");
+		exit(EXIT_FAILURE);
+	}if (n==HTML) {
+		strcpy(&response[*i], "Content-Type: text/html; charset=utf-8\n\n");
+		*i = countChar(response);
+	}else if (n==JS) {
+		strcpy(&response[*i], "Content-Type: text/javascript; charset=utf-8\n\n");
+		*i = countChar(response);
+	} return 1;
+};
+
+int countChar(char *buf){
+	int nc=0;
+	while(buf[nc]!='\0') {
+		nc++;
+	}
+	return nc;
+};
+
+int addResponse(char *response, char *src, int *i) {
+	strcpy(&response[*i], src);
+	*i = countChar(response);
+	return 1;
 };
