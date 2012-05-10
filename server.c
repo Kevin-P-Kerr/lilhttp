@@ -56,6 +56,10 @@ int Write(int *, char *, int);
 
 int getDiff(struct lexer *);
 
+int handleResponse(int *);
+
+int parseGet(char *, char *, int *);
+
 int restartLex(struct lexer *);
 
 Token *getToken(char *, struct lexer *);
@@ -78,7 +82,6 @@ void initFt(void);
 int main(int argc, char *argv[]) {
 	char *progname=argv[0];
 	int sockfd, newsockfd, portno, clilen, n, pid, epollfd;
-	char buffer[BUFSIZ];
 	struct sockaddr_in serv_addr, cli_addr;
 	initFt();
 	if (argc < 2 ) {
@@ -137,7 +140,7 @@ int main(int argc, char *argv[]) {
 					continue;
 				}
 			} else { // there is stuff for us to read
-					handleResponse(&events[n].data.fd, buffer);
+					handleResponse(&events[n].data.fd);
 					fprintf(stderr, "we are about to close file descriptor %d\n", events[n].data.fd);
 					close (events[n].data.fd);
 					fprintf(stderr, "connection closed\n");
@@ -290,6 +293,58 @@ Token *getToken(char *request, struct lexer *lex) {
 	return tok;
 };
 //request parsing and response building
+
+int  handleResponse(int *fd) {
+	char buf[BUFSIZ], retbuf[BUFSIZ] //bufsiz is the maximum allowable request
+	int i = 0;
+	Token tok;
+	Read(*fd, buf, BUFSIZ);
+	tok = parseRequest(buf);
+	if tok.type == GET {
+		addResponse("HTTP/1.0 200 OK\n", retbuf, &i);
+		addResponse("Server: KevServer/0.3\n", retbuf, &i);
+		parseGet(buf, retbuf, &i);
+		Write(*fd, retbuf, strlen(retbuf));
+		return 1; 
+	} else {
+		addResponse("Unkown Request Type\n", retbuf, &i)
+		Write(*fd, retbuf, strlen(retbuf));
+		return 1;
+	}
+};
+
+int parseGet(char *request, char *response, int *i) {
+	Token *tok;
+	struct lexer lex;
+	int nc=0, rfd;
+	char *path;
+	char tmp[BUFSIZ];
+
+	tok = getToken(request, &lex);
+	memset(tmp, '\0', BUFSIZ);
+	if tok.type == GET {
+		path = malloc(sizeof(char) * strlen(tok.value));
+		strcpy(path, tok.value);
+		determineDocType(path, response, i);
+		path = formatPath(path);
+		if(rfd=inFt(path)<0) {
+			rfd = open(path, O_RDONLY);
+			addFt(rfd);
+			Read(rfd, tmp, BUFSIZ);
+			addResponse(tmp, response, i);
+			free(path);
+			free(tok);
+			return 1;
+		} else {
+			pread(rfd, tmp, BUFSIZ, 0);
+			addResponse(tmp, response, i);
+			free(path);
+			free(tok);
+			return 1;
+		}
+	}
+};
+
 int determineDocType(char *path, char *response, int *i) {
 	int n=1;
 	char *tmp;
