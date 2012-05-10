@@ -58,6 +58,8 @@ int getDiff(struct lexer *);
 
 int handleResponse(int *);
 
+int parseRequest(char *);
+
 int parseGet(char *, char *, int *);
 
 int formatPath(char *);
@@ -299,10 +301,11 @@ Token *getToken(char *request, struct lexer *lex) {
 int  handleResponse(int *fd) {
 	char buf[BUFSIZ], retbuf[BUFSIZ] //bufsiz is the maximum allowable request
 	int i = 0;
-	Token tok;
+	Token *tok;
 	Read(*fd, buf, BUFSIZ);
 	tok = parseRequest(buf);
 	if tok.type == GET {
+		free(tok);
 		addResponse("HTTP/1.0 200 OK\n", retbuf, &i);
 		addResponse("Server: KevServer/0.3\n", retbuf, &i);
 		parseGet(buf, retbuf, &i);
@@ -313,6 +316,13 @@ int  handleResponse(int *fd) {
 		Write(*fd, retbuf, strlen(retbuf));
 		return 1;
 	}
+};
+
+Token *parseRequest(char *request) {
+	Token *tok
+	struct lexer lex;
+	tok = getToken(tok, &lex);
+	return tok;
 };
 
 int parseGet(char *request, char *response, int *i) {
@@ -330,13 +340,19 @@ int parseGet(char *request, char *response, int *i) {
 		determineDocType(path, response, i);
 		path = formatPath(path);
 		if(rfd=inFt(path)<0) {
-			rfd = open(path, O_RDONLY);
+			if (rfd = open(path, O_RDONLY)<0) {
+				handleFileError(reponse, i);
+				free(path);
+				free(tok);
+				return 1;
+			} else {
 			addFt(rfd);
 			Read(rfd, tmp, BUFSIZ);
 			addResponse(tmp, response, i);
 			free(path);
 			free(tok);
 			return 1;
+			}
 		} else {
 			pread(rfd, tmp, BUFSIZ, 0);
 			addResponse(tmp, response, i);
