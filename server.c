@@ -76,6 +76,8 @@ int addResponse(char *, char*, int *);
 
 int handleFileError(char *, int *);
 
+int inFt(char *);
+
 int makeSocketNB(int *);
 
 int createpoll(void);
@@ -210,6 +212,14 @@ void initFt(void) {
 	ft.table[0].path = malloc(sizeof(char));
 	*ft.table[0].path = 'g';
 	ft.table[0].fd = -1;
+};
+
+int inFt(char *path) {
+	int i=0;
+	for (i; i<=ft.size; i++) {
+		if (strcmp(ft.table[i], path) == 0)
+			return 1;
+	} return -1;
 };
 
 int Read(int *fd, char *buf, int buf_siz) {
@@ -360,6 +370,11 @@ int parseGet(char *request, char *response, int *i) {
 			free(tok);
 			return 1;
 		}
+	} else {
+		addResponse("ERROR!\n", response, i);
+		free(path);
+		free(tok);
+		return 1;
 	}
 };
 
