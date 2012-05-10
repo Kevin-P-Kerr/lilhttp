@@ -60,6 +60,8 @@ int handleResponse(int *);
 
 int parseGet(char *, char *, int *);
 
+int formatPath(char *);
+
 int restartLex(struct lexer *);
 
 Token *getToken(char *, struct lexer *);
@@ -342,6 +344,19 @@ int parseGet(char *request, char *response, int *i) {
 			free(tok);
 			return 1;
 		}
+	}
+};
+
+char *formatPath(char *path) {
+	char *new_path;
+	if path[0]!='.' {
+		new_path = malloc((sizeof(char) * strlen(path))+1);
+		new_path[0] = '.';
+		strcpy(&new_path[1], path);
+		free(path);
+		return new_path;
+	} else {
+		return path;
 	}
 };
 
