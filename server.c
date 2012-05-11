@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
 					fprintf(stderr, "connection closed\n");
 					continue;
 			}
-		}
+		} c("out of main");
 	} exit(EXIT_SUCCESS);
 };
 // function definitons
@@ -174,7 +174,7 @@ int createSocket(int *fd) {
 		return 1;
 	else {
 		exit(EXIT_FAILURE);
-	}
+	} c("out of createSocket");
 };
 
 int Bind(int *fd, struct sockaddr_in *skaddr) {
@@ -183,6 +183,7 @@ int Bind(int *fd, struct sockaddr_in *skaddr) {
 		fprintf(stderr, "BIND ERROR\n");
 		exit(EXIT_FAILURE);
 	} else {
+		c("out of bind");
 		return 1;
 	}
 };
@@ -193,6 +194,7 @@ int Accept(int *nsfd, int *sfd, struct sockaddr_in *cli_addr, int *clilen) {
 		fprintf(stderr, "ACCEPT ERROR\n");
 		exit(EXIT_FAILURE);
 	} else {
+		c("out of accept");
 		return 1;
 	}
 };
@@ -208,18 +210,23 @@ int makeSocketNB (int *sfd) {
 	s = fcntl(*sfd, F_SETFL, flags);
 	if (s == -1) {
 		perror ("fcntl2");
+		c("out of makeSocketNB");
 		return -1;
 	}
+	c("out of makeSocketNB");
 	return 0;
 };
 
 int createpoll(void) {
 	c("in createpoll");
 	int fd;
-	if ((fd=epoll_create(SOMAXCONN))<0)
+	if ((fd=epoll_create(SOMAXCONN))<0) {
+		c("out of createpoll");
 		return -1;
-	else
+	else {
+		c("out of createpoll");
 		return fd;
+	}
 };
 // file handling
 void initFt(void) {
@@ -230,15 +237,19 @@ void initFt(void) {
 	*ft.table[0].path = 'g';
 	ft.table[0].fd = -1;
 	ft.flag = 0;
+	c("out of initFt");
 };
 
 int inFt(char *path) {
 	c("in inFT");
 	int i=0;
 	for (i; i<=ft.size; i++) {
-		if (strcmp(ft.table[i].path, path) == 0)
+		if (strcmp(ft.table[i].path, path) == 0) {
+			c("out of inFt");
 			return 1;
-	} return -1;
+		}
+	} c("out of inFt");
+	return -1;
 };
 
 int addFt(char *path, int fd) {
@@ -255,15 +266,18 @@ int addFt(char *path, int fd) {
 		ft.table[ft.size].path = malloc(sizeof(char) * strlen(path));
 		strcpy(ft.table[ft.size].path, path);
 		ft.table[ft.size].fd = fd;
-	} return 1;
+	} c("out of addFt");
+	return 1;
 };
 
 int Read(int *fd, char *buf, int buf_siz) {
 	c("in Read");
 	if (read(*fd, buf, buf_siz)<0) {
 		fprintf(stderr, "Read Error\n");
+		c("out of Read");
 		return 1; //keep on pushing
 	}else {
+		c("out of Read");
 		return 1;
 	}
 };
@@ -272,8 +286,10 @@ int Write(int *fd, char *msg, int len) {
 	c("in Write");
 	if (write(*fd, msg, len)<0) {
 		fprintf(stderr, "Write Error\n");
+		c("out of Write");
 		exit(EXIT_FAILURE);
 	} else {
+		c("out of Write")
 		return 1;
 	}
 };
@@ -282,6 +298,7 @@ int handleFileError(char *response, int *i) {
 	c("in handleFileError");
 	addResponse(response, "HTTP/1.0 404 Not Found\n\n", i);
 	addResponse(response, "<!DOCTYPE HTML><html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1></body></html>", i);
+	c("out of handleFileError");
 	return 1;
 };
 //Lexing
@@ -297,7 +314,8 @@ int getDiff(struct lexer *lex) {
 			fprintf(stderr, "%d\n", i);
 			i++;
 	}
-	} return 1;
+	} c("out of getDiff");
+	return 1;
 };
 
 void initLex(struct lexer *lex, char *buf) {
@@ -305,6 +323,7 @@ void initLex(struct lexer *lex, char *buf) {
 	lex->start = buf;
 	lex->end = buf;
 	lex->flag=OFF;
+	c("out of initLex");
 };
 
 int restartLex(struct lexer *lex) {
@@ -312,8 +331,11 @@ int restartLex(struct lexer *lex) {
 	while (*lex->end==' ' || *lex->end=='\n') {
 		++lex->end;
 		if (*lex->end=='\0' || *lex->end==EOF) {
-			} return 1;
-	}return 1;
+			c("out of restartLex");
+			return 1;
+		}
+	} c("out of restartLex");
+	return 1;
 };
 
 Token *getToken(char *request, struct lexer *lex) {
@@ -329,6 +351,7 @@ Token *getToken(char *request, struct lexer *lex) {
 		tok->type=END;
 		tok->value = malloc(sizeof(char));
 		*tok->value = *lex->end;
+		c("out of getToken");
 		return tok;
 	} getDiff(lex);
 	diff = lex->end - lex->start;
@@ -340,6 +363,7 @@ Token *getToken(char *request, struct lexer *lex) {
 		tok->value = malloc(diff+1 * sizeof(char));
 		strcpy(tok->value, tmp);
 		free(tmp);
+		c("out of getToken");
 		return tok;
 	} tok->type=n; //otherwise, the type is defined in the symbol table
 	restartLex(lex);
@@ -352,6 +376,7 @@ Token *getToken(char *request, struct lexer *lex) {
 	tok->value = malloc(diff+1 * sizeof(char));
 	strcpy(tok->value, tmp);
 	free(tmp);
+	c("out of getToken");
 	return tok;
 };
 
@@ -370,10 +395,12 @@ int checkSym(char *string) { // returns a symbol value if string is in table
 	while(i<=tablelen) {
 		if (strcmp(table[i].key, string)==0)
         {
+			c("out of checkSym");
             return table[i].value;
         }
 		++i;
 	} if (i>tablelen) { // unable to find symbol
+		c("out of checkSym");
 		return -1;
 	} else {
 		fprintf(stderr, "ERROR IN CHECKSYM\n");
@@ -398,10 +425,12 @@ int  handleResponse(int *fd) {
 		addResponse("Server: KevServer/0.3\n", retbuf, &i);
 		parseGet(buf, retbuf, &i);
 		Write(fd, retbuf, strlen(retbuf));
+		c("out of handleResponse");
 		return 1; 
 	} else {
 		addResponse("Unkown Request Type\n", retbuf, &i);
 		Write(fd, retbuf, strlen(retbuf));
+		c("out of handleResponse");
 		return 1;
 	}
 };
@@ -412,6 +441,7 @@ Token *parseRequest(char *request) {
 	struct lexer lex;
 	initLex(&lex, request);
 	tok = getToken(request, &lex);
+	c("out of parseRequest");
 	return tok;
 };
 
@@ -436,6 +466,7 @@ int parseGet(char *request, char *response, int *i) {
 				handleFileError(response, i);
 				free(path);
 				free(tok);
+				c("out of parseGet");
 				return 1;
 			} else {
 			addFt(path, rfd);
@@ -443,6 +474,7 @@ int parseGet(char *request, char *response, int *i) {
 			addResponse(tmp, response, i);
 			free(path);
 			free(tok);
+			c("out of parseGet");
 			return 1;
 			}
 		} else {
@@ -450,12 +482,14 @@ int parseGet(char *request, char *response, int *i) {
 			addResponse(tmp, response, i);
 			free(path);
 			free(tok);
+			c("out of parseGet");
 			return 1;
 		}
 	} else {
 		addResponse("ERROR!\n", response, i);
 		free(path);
 		free(tok);
+		c("out of parseGet");
 		return 1;
 	}
 };
@@ -468,8 +502,10 @@ char *formatPath(char *path) {
 		new_path[0] = '.';
 		strcpy(&new_path[1], path);
 		free(path);
+		c("out of formatPath");
 		return new_path;
 	} else {
+		c("out of formatPath");
 		return path;
 	}
 };
@@ -480,6 +516,7 @@ int determineDocType(char *path, char *response, int *i) {
 	char *tmp;
 	if (strlen(path)<=2) {
 		strcpy(&response[*i], "Content-Type: text; charset=utf-8\n\n");
+		c("out of determineDocType");
 		return 1;
 	}while (path[n]!='.') {
 		n++;
@@ -495,7 +532,8 @@ int determineDocType(char *path, char *response, int *i) {
 	}else if (n==JS) {
 		strcpy(&response[*i], "Content-Type: text/javascript; charset=utf-8\n\n");
 		*i = countChar(response);
-	} return 1;
+	} c("out of determineDocType");
+	return 1;
 };
 
 int countChar(char *buf){
@@ -503,7 +541,7 @@ int countChar(char *buf){
 	int nc=0;
 	while(buf[nc]!='\0') {
 		nc++;
-	}
+	} c("out of countChar");
 	return nc;
 };
 
@@ -511,6 +549,7 @@ int addResponse(char *response, char *src, int *i) {
 	c("in addResponse");
 	strcpy(&response[*i], src);
 	*i = countChar(response);
+	c("out of addResponse");
 	return 1;
 };
 
