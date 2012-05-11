@@ -164,7 +164,8 @@ int main(int argc, char *argv[]) {
 					continue;
 			}
 		} c("out of main");
-	} exit(EXIT_SUCCESS);
+		 exit(EXIT_SUCCESS);
+	}
 };
 // function definitons
 // socket creation and binding
