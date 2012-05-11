@@ -28,6 +28,7 @@ struct table {
 struct ftable {
 	struct table *table;
 	int size;
+	int flag;
 };
 
 typedef struct token {
@@ -58,15 +59,19 @@ int getDiff(struct lexer *);
 
 int handleResponse(int *);
 
-int parseRequest(char *);
+Token *parseRequest(char *);
 
 int parseGet(char *, char *, int *);
 
-int formatPath(char *);
+char *formatPath(char *);
 
 int restartLex(struct lexer *);
 
+void initLex(struct lexer *, char *);
+
 Token *getToken(char *, struct lexer *);
+
+int checkSym(char *);
 
 int determineDocType(char *, char *, int *);
 
@@ -84,8 +89,13 @@ int createpoll(void);
 
 void initFt(void);
 
+int addFt(char *, int);
+
+void c(char *);
+
 //main 
 int main(int argc, char *argv[]) {
+	c("in main");
 	char *progname=argv[0];
 	int sockfd, newsockfd, portno, clilen, n, pid, epollfd;
 	struct sockaddr_in serv_addr, cli_addr;
@@ -127,20 +137,21 @@ int main(int argc, char *argv[]) {
 						makeSocketNB(&newsockfd);
 						fprintf(stderr, "Accepted a new connection on fd %d, made nonblocking\n", newsockfd);
 					} else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-						fprintf (stderr, "we have accepted all the clients on this event");
+						fprintf (stderr, "we have accepted all the clients on this event\n");
 						break;
 					} event.data.fd = newsockfd;
 					event.events = EPOLLIN | EPOLLET;
-					if (epoll_ctl(epollfd, EPOLL_CTL_ADD, newsockfd, &event)<0) { 						fprintf(stderr, "\nepoll_ctl error\n");
+					if (epoll_ctl(epollfd, EPOLL_CTL_ADD, newsockfd, &event)<0) {
+						fprintf(stderr, "epoll_ctl error\n");
 						if (errno == EEXIST)
 							fprintf(stderr, "fd already registered\n");
 						else if (errno == EBADF) {
-							fprintf(stderr, "\nfd bad\n%d\n", newsockfd);
+							fprintf(stderr, "fd bad\n%d\n", newsockfd);
 							break;
 						}else if (errno == ENOMEM)
-							fprintf(stderr, "\nno memory\n");
+							fprintf(stderr, "no memory\n");
 						else if (errno == ENOSPC)
-							fprintf(stderr, "\n enospc\n");
+							fprintf(stderr, "enospc\n");
 						exit(EXIT_FAILURE);
 					}
 					continue;
@@ -158,6 +169,7 @@ int main(int argc, char *argv[]) {
 // function definitons
 // socket creation and binding
 int createSocket(int *fd) {
+	c("in createSocket");
 	if ((*fd = socket(AF_INET, SOCK_STREAM, 0))>=0)
 		return 1;
 	else {
@@ -166,6 +178,7 @@ int createSocket(int *fd) {
 };
 
 int Bind(int *fd, struct sockaddr_in *skaddr) {
+	c("in Bind");
 	if (bind(*fd, (struct sockaddr *) skaddr, sizeof(*skaddr))<0) {
 		fprintf(stderr, "BIND ERROR\n");
 		exit(EXIT_FAILURE);
@@ -175,6 +188,7 @@ int Bind(int *fd, struct sockaddr_in *skaddr) {
 };
 
 int Accept(int *nsfd, int *sfd, struct sockaddr_in *cli_addr, int *clilen) {
+	c("in Accept");
 	if ((*nsfd = accept(*sfd, (struct sockaddr *) cli_addr, clilen))<0) {
 		fprintf(stderr, "ACCEPT ERROR\n");
 		exit(EXIT_FAILURE);
@@ -184,6 +198,7 @@ int Accept(int *nsfd, int *sfd, struct sockaddr_in *cli_addr, int *clilen) {
 };
 
 int makeSocketNB (int *sfd) {
+	c("in makeSocketNB");
 	int flags, s;
 	flags = fcntl (*sfd, F_GETFL, 0);
 	if (flags == -1) {
@@ -199,6 +214,7 @@ int makeSocketNB (int *sfd) {
 };
 
 int createpoll(void) {
+	c("in createpoll");
 	int fd;
 	if ((fd=epoll_create(SOMAXCONN))<0)
 		return -1;
@@ -207,22 +223,43 @@ int createpoll(void) {
 };
 // file handling
 void initFt(void) {
+	c("in initFt");
 	ft.size = 0;
 	ft.table = malloc(sizeof(struct table));
 	ft.table[0].path = malloc(sizeof(char));
 	*ft.table[0].path = 'g';
 	ft.table[0].fd = -1;
+	ft.flag = 0;
 };
 
 int inFt(char *path) {
+	c("in inFT");
 	int i=0;
 	for (i; i<=ft.size; i++) {
-		if (strcmp(ft.table[i], path) == 0)
+		if (strcmp(ft.table[i].path, path) == 0)
 			return 1;
 	} return -1;
 };
 
+int addFt(char *path, int fd) {
+	c("in addFT");
+	if (ft.flag == 0) {
+		ft.flag == 1;
+		free(ft.table[0].path);
+		ft.table[0].path = malloc(sizeof(char) * strlen(path));
+		strcpy(ft.table[0].path, path);
+		ft.table[0].fd = fd;
+	} else {
+		ft.size++;
+		ft.table = realloc(ft.table, sizeof(struct table) * (ft.size + 1));
+		ft.table[ft.size].path = malloc(sizeof(char) * strlen(path));
+		strcpy(ft.table[ft.size].path, path);
+		ft.table[ft.size].fd = fd;
+	} return 1;
+};
+
 int Read(int *fd, char *buf, int buf_siz) {
+	c("in Read");
 	if (read(*fd, buf, buf_siz)<0) {
 		fprintf(stderr, "Read Error\n");
 		return 1; //keep on pushing
@@ -232,6 +269,7 @@ int Read(int *fd, char *buf, int buf_siz) {
 };
 
 int Write(int *fd, char *msg, int len) {
+	c("in Write");
 	if (write(*fd, msg, len)<0) {
 		fprintf(stderr, "Write Error\n");
 		exit(EXIT_FAILURE);
@@ -241,12 +279,14 @@ int Write(int *fd, char *msg, int len) {
 };
 
 int handleFileError(char *response, int *i) {
+	c("in handleFileError");
 	addResponse(response, "HTTP/1.0 404 Not Found\n\n", i);
 	addResponse(response, "<!DOCTYPE HTML><html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1></body></html>", i);
 	return 1;
 };
 //Lexing
 int getDiff(struct lexer *lex) {
+	c("in getDiff");
 	lex->start = lex->end;
 	int i=0;
 	if (*lex->end==EOF || *lex->end=='\0') {
@@ -260,7 +300,15 @@ int getDiff(struct lexer *lex) {
 	} return 1;
 };
 
+void initLex(struct lexer *lex, char *buf) {
+	c("in initLex");
+	lex->start = buf;
+	lex->end = buf;
+	lex->flag=OFF;
+};
+
 int restartLex(struct lexer *lex) {
+	c("in restartLex");
 	while (*lex->end==' ' || *lex->end=='\n') {
 		++lex->end;
 		if (*lex->end=='\0' || *lex->end==EOF) {
@@ -268,8 +316,8 @@ int restartLex(struct lexer *lex) {
 	}return 1;
 };
 
-
 Token *getToken(char *request, struct lexer *lex) {
+	c("in getToken");
 	int diff, n;
 	char *tmp;
 	Token *tok = malloc(sizeof(Token));
@@ -287,7 +335,7 @@ Token *getToken(char *request, struct lexer *lex) {
 	tmp = malloc(diff+1 * sizeof(char));
 	strncpy(tmp, lex->start, diff);
 	tmp[diff+1] = '\0';
-	if((n=Checksym(tmp))<0) {
+	if((n=checkSym(tmp))<0) {
 		tok->type = OTHER;
 		tok->value = malloc(diff+1 * sizeof(char));
 		strcpy(tok->value, tmp);
@@ -306,58 +354,92 @@ Token *getToken(char *request, struct lexer *lex) {
 	free(tmp);
 	return tok;
 };
+
+int checkSym(char *string) { // returns a symbol value if string is in table
+	c("in checksym");
+	static struct pair {
+		char *key;
+		int value;
+	} table[] = {
+		"GET", GET,
+		".html", HTML,
+		".js", JS
+	};
+
+	int i=0, tablelen=2;
+	while(i<=tablelen) {
+		if (strcmp(table[i].key, string)==0)
+        {
+            return table[i].value;
+        }
+		++i;
+	} if (i>tablelen) { // unable to find symbol
+		return -1;
+	} else {
+		fprintf(stderr, "ERROR IN CHECKSYM\n");
+		exit(EXIT_FAILURE);
+	}
+};
+
 //request parsing and response building
 
 int  handleResponse(int *fd) {
-	char buf[BUFSIZ], retbuf[BUFSIZ] //bufsiz is the maximum allowable request
+	c("in handleResponse");
+	char buf[BUFSIZ], retbuf[BUFSIZ]; //bufsiz is the maximum allowable request
 	int i = 0;
+	memset(buf, '\0', BUFSIZ-1);
+	memset(retbuf, '\0', BUFSIZ-1);
 	Token *tok;
-	Read(*fd, buf, BUFSIZ);
+	Read(fd, buf, BUFSIZ);
 	tok = parseRequest(buf);
-	if tok.type == GET {
+	if (tok->type == GET) {
 		free(tok);
 		addResponse("HTTP/1.0 200 OK\n", retbuf, &i);
 		addResponse("Server: KevServer/0.3\n", retbuf, &i);
 		parseGet(buf, retbuf, &i);
-		Write(*fd, retbuf, strlen(retbuf));
+		Write(fd, retbuf, strlen(retbuf));
 		return 1; 
 	} else {
-		addResponse("Unkown Request Type\n", retbuf, &i)
-		Write(*fd, retbuf, strlen(retbuf));
+		addResponse("Unkown Request Type\n", retbuf, &i);
+		Write(fd, retbuf, strlen(retbuf));
 		return 1;
 	}
 };
 
 Token *parseRequest(char *request) {
-	Token *tok
+	c("in parseRequest");
+	Token *tok;
 	struct lexer lex;
-	tok = getToken(tok, &lex);
+	initLex(&lex, request);
+	tok = getToken(request, &lex);
 	return tok;
 };
 
 int parseGet(char *request, char *response, int *i) {
+	c("in parseGet");
 	Token *tok;
 	struct lexer lex;
 	int nc=0, rfd;
 	char *path;
 	char tmp[BUFSIZ];
 
+	initLex(&lex, request);
 	tok = getToken(request, &lex);
 	memset(tmp, '\0', BUFSIZ);
-	if tok.type == GET {
-		path = malloc(sizeof(char) * strlen(tok.value));
-		strcpy(path, tok.value);
+	if (tok->type == GET) {
+		path = malloc(sizeof(char) * strlen(tok->value));
+		strcpy(path, tok->value);
 		determineDocType(path, response, i);
 		path = formatPath(path);
 		if(rfd=inFt(path)<0) {
 			if (rfd = open(path, O_RDONLY)<0) {
-				handleFileError(reponse, i);
+				handleFileError(response, i);
 				free(path);
 				free(tok);
 				return 1;
 			} else {
-			addFt(rfd);
-			Read(rfd, tmp, BUFSIZ);
+			addFt(path, rfd);
+			Read(&rfd, tmp, BUFSIZ);
 			addResponse(tmp, response, i);
 			free(path);
 			free(tok);
@@ -379,8 +461,9 @@ int parseGet(char *request, char *response, int *i) {
 };
 
 char *formatPath(char *path) {
+	c("in formatPath");
 	char *new_path;
-	if path[0]!='.' {
+	if (path[0]!='.') {
 		new_path = malloc((sizeof(char) * strlen(path))+1);
 		new_path[0] = '.';
 		strcpy(&new_path[1], path);
@@ -392,6 +475,7 @@ char *formatPath(char *path) {
 };
 
 int determineDocType(char *path, char *response, int *i) {
+	c("in determineDocType");
 	int n=1;
 	char *tmp;
 	if (strlen(path)<=2) {
@@ -402,7 +486,7 @@ int determineDocType(char *path, char *response, int *i) {
 	}
 	tmp = malloc((strlen(path)-n) * sizeof(char));
 	strcpy(tmp, &path[n]);
-	if((n=Checksym(tmp))<0) {
+	if((n=checkSym(tmp))<0) {
 		fprintf(stderr, "FILE TYPE NOT SUPPORTED\n");
 		exit(EXIT_FAILURE);
 	}if (n==HTML) {
@@ -415,6 +499,7 @@ int determineDocType(char *path, char *response, int *i) {
 };
 
 int countChar(char *buf){
+	c("in countChar");
 	int nc=0;
 	while(buf[nc]!='\0') {
 		nc++;
@@ -423,7 +508,12 @@ int countChar(char *buf){
 };
 
 int addResponse(char *response, char *src, int *i) {
+	c("in addResponse");
 	strcpy(&response[*i], src);
 	*i = countChar(response);
 	return 1;
+};
+
+void c(char *string) {
+	fprintf(stderr, "%s\n", string);
 };
