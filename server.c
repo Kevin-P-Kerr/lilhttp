@@ -100,6 +100,7 @@ int main(int argc, char *argv[]) {
 	int sockfd, newsockfd, portno, clilen, n, pid, epollfd;
 	struct sockaddr_in serv_addr, cli_addr;
 	initFt();
+	clilen = 0;
 	if (argc < 2 ) {
 		fprintf(stderr, "\nERROR: No Port Provided\n");
 		exit(EXIT_FAILURE);
@@ -140,7 +141,26 @@ int main(int argc, char *argv[]) {
 						fprintf (stderr, "we have accepted all the clients on this event\n");
 						break;
 					} else {
-						while (newsockfd<0) {
+						if (errno == ENETDOWN) 
+							c("ENETDOWN");
+						else if (errno == EPROTO)
+							c("EPROTO");
+						else if (errno == ENOPROTOOPT)
+							c("ENOPROTOOPT");
+						else if (errno == EHOSTDOWN)
+							c("EHOSTDOWN");
+						else if (errno == ENONET)
+							c("ENONET");
+						else if (errno == EHOSTUNREACH)
+							c("EHOSTUNREACH");
+						else if (errno == EOPNOTSUPP) 
+							c("EOPNOTSUPP");
+						else if (errno == ENETUNREACH)
+							c("ENETUNREACH");
+						else {
+							c("what is going on here?");
+							perror(sys_errlist[errno]);
+						} while (newsockfd<0) {
 							newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 					 }
 					} event.data.fd = newsockfd;
