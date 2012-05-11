@@ -139,6 +139,10 @@ int main(int argc, char *argv[]) {
 					} else if (errno == EAGAIN || errno == EWOULDBLOCK) {
 						fprintf (stderr, "we have accepted all the clients on this event\n");
 						break;
+					} else {
+						while (newsockfd<0) {
+							newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+					 }
 					} event.data.fd = newsockfd;
 					event.events = EPOLLIN | EPOLLET;
 					if (epoll_ctl(epollfd, EPOLL_CTL_ADD, newsockfd, &event)<0) {
