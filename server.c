@@ -547,9 +547,9 @@ int countChar(char *buf){
 	return nc;
 };
 
-int addResponse(char *response, char *src, int *i) {
+int addResponse(char *response, char *resbuf, int *i) {
 	c("in addResponse");
-	strcpy(&response[*i], src);
+	strcpy(&resbuf[*i], response);
 	*i = countChar(response);
 	c("out of addResponse");
 	return 1;
