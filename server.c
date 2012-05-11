@@ -161,11 +161,9 @@ int main(int argc, char *argv[]) {
 					fprintf(stderr, "we are about to close file descriptor %d\n", events[n].data.fd);
 					close (events[n].data.fd);
 					fprintf(stderr, "connection closed\n");
-					continue;
 			}
-		} c("out of main");
-		 exit(EXIT_SUCCESS);
-	}
+		} continue;
+	} exit(EXIT_SUCCESS);
 };
 // function definitons
 // socket creation and binding
@@ -275,6 +273,7 @@ int addFt(char *path, int fd) {
 
 int Read(int *fd, char *buf, int buf_siz) {
 	c("in Read");
+	fprintf(stderr, "%d\n", *fd);
 	if (read(*fd, buf, buf_siz)<0) {
 		fprintf(stderr, "Read Error\n");
 		c("out of Read");
@@ -287,6 +286,7 @@ int Read(int *fd, char *buf, int buf_siz) {
 
 int Write(int *fd, char *msg, int len) {
 	c("in Write");
+	fprintf(stderr, "%s\n", msg);
 	if (write(*fd, msg, len)<0) {
 		fprintf(stderr, "Write Error\n");
 		c("out of Write");
@@ -465,7 +465,7 @@ int parseGet(char *request, char *response, int *i) {
 		determineDocType(path, response, i);
 		path = formatPath(path);
 		if(rfd=inFt(path)<0) {
-			if (rfd = open(path, O_RDONLY)<0) {
+			if ((rfd = open(path, O_RDONLY))<0) {
 				handleFileError(response, i);
 				free(path);
 				free(tok);
@@ -518,7 +518,7 @@ int determineDocType(char *path, char *response, int *i) {
 	int n=1;
 	char *tmp;
 	if (strlen(path)<=2) {
-		strcpy(&response[*i], "Content-Type: text; charset=utf-8\n\n");
+		addResponse("Content-Type: text; charset=utf-8\n\n", response, i);
 		c("out of determineDocType");
 		return 1;
 	}while (path[n]!='.') {
@@ -528,30 +528,31 @@ int determineDocType(char *path, char *response, int *i) {
 	strcpy(tmp, &path[n]);
 	if((n=checkSym(tmp))<0) {
 		fprintf(stderr, "FILE TYPE NOT SUPPORTED\n");
-		exit(EXIT_FAILURE);
-	}if (n==HTML) {
-		strcpy(&response[*i], "Content-Type: text/html; charset=utf-8\n\n");
-		*i = countChar(response);
+		addResponse("Content-Type: text; charset=utf-8\n\n", response, i);
+	}else if (n==HTML) {
+		addResponse("Content-Type: text/html; charset=utf-8\n\n", response, i);
 	}else if (n==JS) {
-		strcpy(&response[*i], "Content-Type: text/javascript; charset=utf-8\n\n");
-		*i = countChar(response);
+		addResponse("Content-Type: text/javascript; charset=utf-8\n\n", response, i);
 	} c("out of determineDocType");
 	return 1;
 };
 
 int countChar(char *buf){
 	c("in countChar");
+	fprintf(stderr, "the buff is\n%s\n", buf);
 	int nc=0;
 	while(buf[nc]!='\0') {
 		nc++;
 	} c("out of countChar");
+	fprintf(stderr, "%d\n", nc);
 	return nc;
 };
 
 int addResponse(char *response, char *resbuf, int *i) {
 	c("in addResponse");
 	strcpy(&resbuf[*i], response);
-	*i = countChar(response);
+	*i = countChar(resbuf);
+	fprintf(stderr, "%c\n", resbuf[*i]);
 	c("out of addResponse");
 	return 1;
 };
