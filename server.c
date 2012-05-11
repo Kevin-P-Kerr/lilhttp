@@ -297,7 +297,6 @@ int addFt(char *path, int fd) {
 
 int Read(int *fd, char *buf, int buf_siz) {
 	c("in Read");
-	fprintf(stderr, "%d\n", *fd);
 	if (read(*fd, buf, buf_siz)<0) {
 		fprintf(stderr, "Read Error\n");
 		c("out of Read");
@@ -323,8 +322,8 @@ int Write(int *fd, char *msg, int len) {
 
 int handleFileError(char *response, int *i) {
 	c("in handleFileError");
-	addResponse(response, "HTTP/1.0 404 Not Found\n\n", i);
-	addResponse(response, "<!DOCTYPE HTML><html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1></body></html>", i);
+	addResponse("HTTP/1.0 404 Not Found\n\n", response, i);
+	addResponse("<!DOCTYPE HTML><html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1></body></html>", response, i);
 	c("out of handleFileError");
 	return 1;
 };
@@ -439,17 +438,16 @@ int checkSym(char *string) { // returns a symbol value if string is in table
 
 int  handleResponse(int *fd) {
 	c("in handleResponse");
-	char buf[BUFSIZ], retbuf[BUFSIZ]; //bufsiz is the maximum allowable request
+	char buf[BUFSIZ], retbuf[2*BUFSIZ]; //bufsiz is the maximum allowable request
 	int i = 0;
 	memset(buf, '\0', BUFSIZ-1);
-	memset(retbuf, '\0', BUFSIZ-1);
+	memset(retbuf, '\0', (2*BUFSIZ)-1);
 	Token *tok;
 	Read(fd, buf, BUFSIZ);
+	fprintf(stderr, "The Request is:\n%s\n", buf);
 	tok = parseRequest(buf);
 	if (tok->type == GET) {
 		free(tok);
-		addResponse("HTTP/1.0 200 OK\n", retbuf, &i);
-		addResponse("Server: KevServer/0.3\n", retbuf, &i);
 		parseGet(buf, retbuf, &i);
 		Write(fd, retbuf, strlen(retbuf));
 		c("out of handleResponse");
@@ -478,7 +476,7 @@ int parseGet(char *request, char *response, int *i) {
 	struct lexer lex;
 	int nc=0, rfd;
 	char *path;
-	char tmp[BUFSIZ];
+	char tmp[2*BUFSIZ];
 
 	initLex(&lex, request);
 	tok = getToken(request, &lex);
@@ -486,7 +484,6 @@ int parseGet(char *request, char *response, int *i) {
 	if (tok->type == GET) {
 		path = malloc(sizeof(char) * strlen(tok->value));
 		strcpy(path, tok->value);
-		determineDocType(path, response, i);
 		path = formatPath(path);
 		if(rfd=inFt(path)<0) {
 			if ((rfd = open(path, O_RDONLY))<0) {
@@ -496,8 +493,11 @@ int parseGet(char *request, char *response, int *i) {
 				c("out of parseGet");
 				return 1;
 			} else {
+			addResponse("HTTP/1.0 200 OK\n", response, i);
+			addResponse("Server: KevServer/0.3\n", response, i);
 			addFt(path, rfd);
-			Read(&rfd, tmp, BUFSIZ);
+			determineDocType(path, response, i);
+			Read(&rfd, tmp, 2*BUFSIZ);
 			addResponse(tmp, response, i);
 			free(path);
 			free(tok);
@@ -505,7 +505,7 @@ int parseGet(char *request, char *response, int *i) {
 			return 1;
 			}
 		} else {
-			pread(rfd, tmp, BUFSIZ, 0);
+			pread(rfd, tmp, 2*BUFSIZ, 0);
 			addResponse(tmp, response, i);
 			free(path);
 			free(tok);
@@ -563,7 +563,6 @@ int determineDocType(char *path, char *response, int *i) {
 
 int countChar(char *buf){
 	c("in countChar");
-	fprintf(stderr, "the buff is\n%s\n", buf);
 	int nc=0;
 	while(buf[nc]!='\0') {
 		nc++;
@@ -574,9 +573,9 @@ int countChar(char *buf){
 
 int addResponse(char *response, char *resbuf, int *i) {
 	c("in addResponse");
+	fprintf(stderr, "i is: %d\n", *i);
 	strcpy(&resbuf[*i], response);
 	*i = countChar(resbuf);
-	fprintf(stderr, "%c\n", resbuf[*i]);
 	c("out of addResponse");
 	return 1;
 };
