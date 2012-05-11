@@ -170,11 +170,13 @@ int main(int argc, char *argv[]) {
 // socket creation and binding
 int createSocket(int *fd) {
 	c("in createSocket");
-	if ((*fd = socket(AF_INET, SOCK_STREAM, 0))>=0)
+	if ((*fd = socket(AF_INET, SOCK_STREAM, 0))>=0) {
+		c("out of createSocket");
 		return 1;
-	else {
+	} else {
+		c("out of createSocket");
 		exit(EXIT_FAILURE);
-	} c("out of createSocket");
+	}
 };
 
 int Bind(int *fd, struct sockaddr_in *skaddr) {
@@ -223,7 +225,7 @@ int createpoll(void) {
 	if ((fd=epoll_create(SOMAXCONN))<0) {
 		c("out of createpoll");
 		return -1;
-	else {
+	} else {
 		c("out of createpoll");
 		return fd;
 	}
@@ -289,7 +291,7 @@ int Write(int *fd, char *msg, int len) {
 		c("out of Write");
 		exit(EXIT_FAILURE);
 	} else {
-		c("out of Write")
+		c("out of Write");
 		return 1;
 	}
 };
