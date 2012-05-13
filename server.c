@@ -271,7 +271,7 @@ int inFt(char *path) {
 	for (i; i<=ft.size; i++) {
 		if (strcmp(ft.table[i].path, path) == 0) {
 			c("out of inFt");
-			return 1;
+			return ft.table[i].fd;
 		}
 	} c("out of inFt");
 	return -1;
