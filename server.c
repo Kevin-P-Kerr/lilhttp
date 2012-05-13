@@ -381,7 +381,7 @@ Token *getToken(char *request, struct lexer *lex) {
 		return tok;
 	} getDiff(lex);
 	diff = lex->end - lex->start;
-	tmp = malloc(diff+1 * sizeof(char));
+	tmp = calloc(diff+1, sizeof(char));
 	strncpy(tmp, lex->start, diff);
 	tmp[diff+1] = '\0';
 	if((n=checkSym(tmp))<0) {
@@ -396,7 +396,7 @@ Token *getToken(char *request, struct lexer *lex) {
 	getDiff(lex);
 	diff = lex->end - lex->start;
 	free(tmp);
-	tmp = malloc(diff+1 * sizeof(char));
+	tmp = calloc(diff+1,  sizeof(char));
 	strncpy(tmp, lex->start, diff);
 	tmp[diff+1] = '\0';
 	tok->value = malloc(diff+1 * sizeof(char));
