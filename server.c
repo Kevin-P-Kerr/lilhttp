@@ -453,7 +453,7 @@ int  handleResponse(int *fd) {
 		c("out of handleResponse");
 		return 1; 
 	} else {
-		addResponse("Unkown Request Type\n", retbuf, &i);
+		addResponse("Unknown Request Type\n", retbuf, &i);
 		Write(fd, retbuf, strlen(retbuf));
 		c("out of handleResponse");
 		return 1;
@@ -480,12 +480,12 @@ int parseGet(char *request, char *response, int *i) {
 
 	initLex(&lex, request);
 	tok = getToken(request, &lex);
-	memset(tmp, '\0', BUFSIZ);
+	memset(tmp, '\0', 2*BUFSIZ);
 	if (tok->type == GET) {
 		path = malloc(sizeof(char) * strlen(tok->value));
 		strcpy(path, tok->value);
 		path = formatPath(path);
-		if(rfd=inFt(path)<0) {
+		if((rfd=inFt(path))<0) {
 			if ((rfd = open(path, O_RDONLY))<0) {
 				handleFileError(response, i);
 				free(path);
@@ -493,26 +493,21 @@ int parseGet(char *request, char *response, int *i) {
 				c("out of parseGet");
 				return 1;
 			} else {
-			addResponse("HTTP/1.0 200 OK\n", response, i);
-			addResponse("Server: KevServer/0.3\n", response, i);
 			addFt(path, rfd);
-			determineDocType(path, response, i);
 			Read(&rfd, tmp, 2*BUFSIZ);
-			addResponse(tmp, response, i);
-			free(path);
-			free(tok);
-			c("out of parseGet");
-			return 1;
 			}
 		} else {
 			pread(rfd, tmp, 2*BUFSIZ, 0);
-			addResponse(tmp, response, i);
-			free(path);
-			free(tok);
-			c("out of parseGet");
-			return 1;
 		}
-	} else {
+		free(tok);
+		addResponse("HTTP/1.0 200 OK\n", response, i);
+		addResponse("Server: KevServer/0.3\n", response, i);
+		determineDocType(path, response, i);
+		free(path);
+		addResponse(tmp, response, i);
+		c("out of parseGet");
+		return 1;
+	} else { // we only handle GET requests for right now
 		addResponse("ERROR!\n", response, i);
 		free(path);
 		free(tok);
