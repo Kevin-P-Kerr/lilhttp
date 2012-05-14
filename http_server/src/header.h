@@ -5,6 +5,7 @@
 #define OTHER 130
 #define HTML 131
 #define JS 132
+#include "dbg.h"
 // declare structs
 struct table {
 	char *path;
