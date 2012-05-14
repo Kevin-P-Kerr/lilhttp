@@ -1,4 +1,4 @@
-// A simple inet server //
+// A simple web  server //
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,90 +12,18 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#define ON 1
-#define OFF 0
-#define END 128
-#define GET 129
-#define OTHER 130
-#define HTML 131
-#define JS 132
-// declare structs
-struct table {
-	char *path;
-	int fd;
-};
+#include "header.h"
 
-struct ftable {
-	struct table *table;
-	int size;
-	int flag;
-};
-
-typedef struct token {
-	int type;
-	char *value;
-} Token;
-
-struct lexer {
-	char *start;
-	char *end;
-	int flag;
-};
-
-struct ftable ft;
-//declare functions
-
-int createSocket(int *);
-
-int Bind(int *, struct sockaddr_in *);
-
-int Accept(int *, int *, struct sockaddr_in *, int *);
-
-int Read(int *, char *, int);
-
-int Write(int *, char *, int);
-
-int getDiff(struct lexer *);
-
-int handleResponse(int *);
-
-Token *parseRequest(char *);
-
-int parseGet(char *, char *, int *);
-
-char *formatPath(char *);
-
-int restartLex(struct lexer *);
-
-void initLex(struct lexer *, char *);
-
-Token *getToken(char *, struct lexer *);
-
-int checkSym(char *);
-
-int determineDocType(char *, char *, int *);
-
-int countChar(char *);
-
-int addResponse(char *, char*, int *);
-
-int handleFileError(char *, int *);
-
-int inFt(char *);
-
-int makeSocketNB(int *);
-
-int createpoll(void);
-
-void initFt(void);
-
-int addFt(char *, int);
-
-void c(char *);
-
-//main 
 int main(int argc, char *argv[]) {
 	c("in main");
+	c("running unit tests");
+	//char *result = all_tests();
+/*	if (*result != 0) {
+		c("TESTS FAILED!");
+		c(result);
+		exit(EXIT_FAILURE);
+	} c("ALL TESTS PASSED"); */
+	//fprintf(stderr, "Tests run: %d\n", tests_run); 
 	char *progname=argv[0];
 	int sockfd, newsockfd, portno, clilen, n, pid, epollfd;
 	struct sockaddr_in serv_addr, cli_addr;
