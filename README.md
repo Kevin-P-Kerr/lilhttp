@@ -2,11 +2,8 @@
 
 ### To Do ###
 
-* Get Basic TCP Sockets Layer Working
-- Implement Buffered Reader
-+ Read And Parse Request Method, Version, and Path
-- Implement A Header Reader For "Header:value"
-+ Check Request Method, Content Type, and Content Size
-- Implement Decoding of Content Based On Type
-+ Implement 100 Continue, Keep-Alive, and Chunked-Transfer
-- Watch For Incomplete and Malicious Requests
+* LIL'HTTP is a small HTTP server that uses epoll 
+  to run an event loop that processes concurrent requests.  
++ Handled 85688 concurrent requests witha  99.65% success rate when benchmarked 
+  with Siege at a concurrency rate of 1000
+- To install: make && sudo make install
