@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "header.h"
 // file handling
 void initFt(void) {
@@ -16,8 +17,8 @@ void initFt(void) {
 
 int inFt(char *path) {
 	c("in inFT");
-	int i=0;
-	for (i; i<=ft.size; i++) {
+	int i;
+	for (i=0; i<=ft.size; i++) {
 		if (strcmp(ft.table[i].path, path) == 0) {
 			c("out of inFt");
 			return ft.table[i].fd;
@@ -29,7 +30,7 @@ int inFt(char *path) {
 int addFt(char *path, int fd) {
 	c("in addFT");
 	if (ft.flag == 0) {
-		ft.flag == 1;
+		ft.flag = 1;
 		free(ft.table[0].path);
 		ft.table[0].path = malloc(sizeof(char) * strlen(path));
 		strcpy(ft.table[0].path, path);
