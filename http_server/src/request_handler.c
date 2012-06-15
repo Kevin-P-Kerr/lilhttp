@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include "header.h"
 //request parsing and response building
 
@@ -45,7 +46,7 @@ int parseGet(char *request, char *response, int *i) {
 	c("in parseGet");
 	Token *tok;
 	struct lexer lex;
-	int nc=0, rfd;
+	int rfd;
 	char *path;
 	char tmp[2*BUFSIZ];
 
