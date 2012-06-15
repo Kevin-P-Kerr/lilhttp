@@ -5,7 +5,7 @@
 Lil'Http is a small web-server written in C.  It currently supports get requests.  It is a single threaded server that handles requests asynchrously using epoll, the linux event notification facility.  Benchmarks will hopefully be forthcoming.
 
 ## How To Use It ##
-To build the server, cd into the src directory and use *make* with no arguments.After compilation, the server will be found in the bin directory.  To run the server, invoke with one argument--the portnumber to be used.  For example
+To build the server, cd into the src directory and use *make* with no arguments.During the build process, a directory within *src* called *bin* should be created--the compiled server will be found there.  To run the server, invoke it with one argument--the portnumber to be used.  For example
 
 		./server 8000
 
