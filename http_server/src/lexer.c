@@ -11,7 +11,7 @@ int getDiff(struct lexer *lex) {
 		fprintf(stderr, "LEX ERROR, LEXER.END IS ON EOF OR 0\n");
 		exit(EXIT_FAILURE);
 	} else {
-		for (*lex->end; *lex->end!=' ' && *lex->end!='\n' && *lex->end!=EOF && *lex->end!='\0'; ++lex->end) {
+		for (; *lex->end!=' ' && *lex->end!='\n' && *lex->end!=EOF && *lex->end!='\0'; ++lex->end) {
 			fprintf(stderr, "%d\n", i);
 			i++;
 	}
