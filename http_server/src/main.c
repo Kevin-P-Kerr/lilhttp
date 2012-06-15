@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
 	initFt();
 	clilen = 0;
 	if (argc < 2 ) {
-		fprintf(stderr, "\nERROR: No Port Provided\n");
+		fprintf(stderr, "\nLil'Http: portno config");
 		exit(EXIT_FAILURE);
 	} if(!createSocket(&sockfd)) {
 		fprintf(stderr, "%s ERROR, COULD NOT CREATE SERVER SOCKET\n", progname);
