@@ -22,7 +22,8 @@ int main(int argc, char *argv[]) {
 	} c("ALL TESTS PASSED"); */
 	//fprintf(stderr, "Tests run: %d\n", tests_run); 
 	char *progname=argv[0];
-	int sockfd, newsockfd, clilen, epollfd;
+	int sockfd, newsockfd, epollfd;
+	socklen_t clilen;
 	struct sockaddr_in serv_addr, cli_addr;
 	initFt();
 	clilen = 0;

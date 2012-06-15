@@ -32,7 +32,7 @@ int Bind(int *fd, struct sockaddr_in *skaddr) {
 	}
 };
 
-int Accept(int *nsfd, int *sfd, struct sockaddr_in *cli_addr, int *clilen) {
+int Accept(int *nsfd, int *sfd, struct sockaddr_in *cli_addr, socklen_t *clilen) {
 	c("in Accept");
 	if ((*nsfd = accept(*sfd, (struct sockaddr *) cli_addr, clilen))<0) {
 		fprintf(stderr, "ACCEPT ERROR\n");
