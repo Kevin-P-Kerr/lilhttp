@@ -6,7 +6,7 @@
 #define HTML 131
 #define JS 132
 #include <sys/socket.h>
-#include <sys.stat.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include "dbg.h"
 // declare structs
@@ -39,7 +39,7 @@ int createSocket(int *);
 
 int Bind(int *, struct sockaddr_in *);
 
-int Accept(int *, int *, struct sockaddr_in *, int *);
+int Accept(int *, int *, struct sockaddr_in *, socklen_t *);
 
 int Read(int *, char *, int);
 
