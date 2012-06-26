@@ -56,18 +56,12 @@ int parseGet(char *request, char *response, int *i) {
 	if (tok->type == GET) {
 		path = malloc(sizeof(char) * strlen(tok->value));
 		strcpy(path, tok->value);
-		path = formatPath(path);
 		if((rfd=inFt(path))<0) {
-			if ((rfd = open(path, O_RDONLY))<0) {
-				handleFileError(response, i);
-				free(path);
-				free(tok);
-				c("out of parseGet");
-				return 1;
-			} else {
-			addFt(path, rfd);
-			Read(&rfd, tmp, 2*BUFSIZ);
-			}
+			handleFileError(response, i);
+			free(path);
+			free(tok);
+			c("out of parseGet");
+			return 1;
 		} else {
 			pread(rfd, tmp, 2*BUFSIZ, 0);
 		}
@@ -88,7 +82,7 @@ int parseGet(char *request, char *response, int *i) {
 	}
 };
 
-char *formatPath(char *path) {
+/*char *formatPath(char *path) {
 	c("in formatPath");
 	char *new_path;
 	if (path[0]!='.') {
@@ -102,7 +96,7 @@ char *formatPath(char *path) {
 		c("out of formatPath");
 		return path;
 	}
-};
+}; */ // no longer necessary
 
 int determineDocType(char *path, char *response, int *i) {
 	c("in determineDocType");

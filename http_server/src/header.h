@@ -26,6 +26,11 @@ typedef struct token {
 	char *value;
 } Token;
 
+struct rToken {
+	char *request;
+	char *path;
+};
+
 struct lexer {
 	char *start;
 	char *end;
@@ -33,7 +38,7 @@ struct lexer {
 };
 
 struct ftable ft;
-//declare functions
+//function prototypes
 
 int createSocket(int *);
 
@@ -80,5 +85,11 @@ int createpoll(void);
 void initFt(void);
 
 int addFt(char *, int);
+
+char *getConfig(void);
+
+int scan(struct rToken *, struct lexer *, char *);
+
+int parse(void);
 
 void c(char *);

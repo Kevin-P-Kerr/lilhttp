@@ -9,7 +9,12 @@ To build the server, cd into the src directory and use *make* with no arguments.
 
 		./server 8000
 
-will run the server from port 8000.  To remove the compiled file and other object files made during compilation, use *make* *clean*
+will run the server from port 8000.  Once invoked, the server will look for a file named "config.svr" from which it will create its router.  The configuration file should conform to the following simple grammar:
+
+    <request> <path> \n
+
+An example configuration file is included in the src directory.
+To remove the compiled file and other object files made during compilation, use *make* *clean*
 
 ## To Do ##
-Currently, the server can only handle requests for files in the same directory it sits in--to remedy that a router should be written.
+Currently, the server can only handle GET requests for static content.  Other request types and dynamic content remain to be implemented.

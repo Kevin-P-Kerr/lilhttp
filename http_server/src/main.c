@@ -11,6 +11,8 @@
 #include <fcntl.h>
 #include "header.h"
 
+struct ftable ft;
+
 int main(int argc, char *argv[]) {
 	c("in main");
 	c("running unit tests");
@@ -26,6 +28,7 @@ int main(int argc, char *argv[]) {
 	socklen_t clilen;
 	struct sockaddr_in serv_addr, cli_addr;
 	initFt();
+	parse();
 	clilen = 0;
 	if (argc < 2 ) {
 		fprintf(stderr, "\nLil'Http: portno config");
